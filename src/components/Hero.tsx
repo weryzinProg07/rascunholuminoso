@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ArrowRight, Printer, FileText, Palette } from 'lucide-react';
 
@@ -15,14 +14,6 @@ const Hero = () => {
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
-            <div className="flex justify-start mb-4">
-              <img 
-                src="/lovable-uploads/0126bf4f-e3d3-4872-8212-a0957cb88626.png" 
-                alt="Rascunho Luminoso Logo" 
-                className="h-20 object-contain"
-              />
-            </div>
-            
             <div className="space-y-4">
               <h1 className="text-4xl md:text-5xl font-bold text-gray-800 leading-tight">
                 Bem-vindos à 

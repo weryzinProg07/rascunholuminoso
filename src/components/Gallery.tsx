@@ -87,8 +87,8 @@ const Gallery = () => {
           <h2 className="text-4xl font-bold text-gray-800 mb-4">
             Nossa <span className="text-orange-500">Galeria</span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Confira aqui alguns trabalhos feitos por nós
+          <p className="text-xl text-gray-600 max-w-4xl mx-auto">
+            Transformamos ideias em soluções criativas: design de flyers, convites personalizados e muito mais. Confira alguns dos trabalhos que já realizamos com qualidade e dedicação!
           </p>
         </div>
 

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { Button } from '@/components/ui/button';
@@ -6,9 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, LogOut, Image as ImageIcon } from 'lucide-react';
+import AdminGalleryManager from './AdminGalleryManager';
 
 const AdminUpload = () => {
   const [title, setTitle] = useState('');
@@ -127,20 +128,20 @@ const AdminUpload = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-2xl">
+      <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center space-x-3">
             <img 
-              src="/lovable-uploads/1ffdcb72-0326-435f-95bd-863af501cc71.png"
+              src="/lovable-uploads/0126bf4f-e3d3-4872-8212-a0957cb88626.png"
               alt="Rascunho Luminoso Logo" 
               className="w-12 h-12 object-contain"
             />
             <div>
               <h1 className="text-2xl font-bold text-gray-800">
-                Área de <span className="text-orange-500">Upload</span>
+                Área <span className="text-orange-500">Administrativa</span>
               </h1>
-              <p className="text-gray-600">Adicione novos trabalhos à galeria</p>
+              <p className="text-gray-600">Gerencie uploads e galeria</p>
             </div>
           </div>
           <Button 
@@ -153,84 +154,98 @@ const AdminUpload = () => {
           </Button>
         </div>
 
-        {/* Formulário de Upload */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Upload className="text-orange-500" size={24} />
-              <span>Novo Upload</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Seleção de arquivo */}
-              <div className="space-y-2">
-                <Label htmlFor="file-upload">Imagem *</Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition-colors">
-                  <input
-                    id="file-upload"
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    {previewUrl ? (
-                      <div className="space-y-4">
-                        <img 
-                          src={previewUrl} 
-                          alt="Preview" 
-                          className="max-w-full max-h-48 mx-auto rounded-lg shadow-md"
-                        />
-                        <p className="text-sm text-gray-600">Clique para alterar a imagem</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <ImageIcon className="mx-auto text-gray-400" size={48} />
-                        <p className="text-gray-600">Clique aqui para selecionar uma imagem</p>
-                        <p className="text-sm text-gray-500">JPG, PNG ou JPEG (máx. 5MB)</p>
-                      </div>
-                    )}
-                  </label>
-                </div>
-              </div>
+        {/* Tabs para Upload e Gerenciar Galeria */}
+        <Tabs defaultValue="upload" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="upload">Novo Upload</TabsTrigger>
+            <TabsTrigger value="manage">Gerenciar Galeria</TabsTrigger>
+          </TabsList>
 
-              {/* Título */}
-              <div className="space-y-2">
-                <Label htmlFor="title">Título do Trabalho *</Label>
-                <Input
-                  id="title"
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ex: Logo para Empresa Local"
-                  required
-                />
-              </div>
+          <TabsContent value="upload">
+            {/* Formulário de Upload */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Upload className="text-orange-500" size={24} />
+                  <span>Novo Upload</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Seleção de arquivo */}
+                  <div className="space-y-2">
+                    <Label htmlFor="file-upload">Imagem *</Label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition-colors">
+                      <input
+                        id="file-upload"
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                      <label htmlFor="file-upload" className="cursor-pointer">
+                        {previewUrl ? (
+                          <div className="space-y-4">
+                            <img 
+                              src={previewUrl} 
+                              alt="Preview" 
+                              className="max-w-full max-h-48 mx-auto rounded-lg shadow-md"
+                            />
+                            <p className="text-sm text-gray-600">Clique para alterar a imagem</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <ImageIcon className="mx-auto text-gray-400" size={48} />
+                            <p className="text-gray-600">Clique aqui para selecionar uma imagem</p>
+                            <p className="text-sm text-gray-500">JPG, PNG ou JPEG (máx. 5MB)</p>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  </div>
 
-              {/* Descrição */}
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição (opcional)</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Adicione detalhes sobre o trabalho realizado..."
-                  rows={3}
-                />
-              </div>
+                  {/* Título */}
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Título do Trabalho *</Label>
+                    <Input
+                      id="title"
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Ex: Logo para Empresa Local"
+                      required
+                    />
+                  </div>
 
-              {/* Botão de envio */}
-              <Button 
-                type="submit" 
-                className="w-full bg-orange-500 hover:bg-orange-600"
-                disabled={isUploading || !selectedFile || !title.trim()}
-              >
-                {isUploading ? 'Enviando...' : 'Enviar para Galeria'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                  {/* Descrição */}
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Descrição (opcional)</Label>
+                    <Textarea
+                      id="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Adicione detalhes sobre o trabalho realizado..."
+                      rows={3}
+                    />
+                  </div>
+
+                  {/* Botão de envio */}
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-orange-500 hover:bg-orange-600"
+                    disabled={isUploading || !selectedFile || !title.trim()}
+                  >
+                    {isUploading ? 'Enviando...' : 'Enviar para Galeria'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="manage">
+            <AdminGalleryManager />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
