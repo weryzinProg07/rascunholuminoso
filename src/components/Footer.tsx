@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Heart } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
@@ -55,10 +56,18 @@ const Footer = () => {
             <div className="text-sm text-gray-400">
               © 2024 Rascunho Luminoso. Todos os direitos reservados.
             </div>
-            <div className="flex items-center space-x-2 text-sm text-gray-400">
-              <span>Desenvolvido por</span>
-              <Heart className="w-4 h-4 text-red-500" />
-              <span className="font-semibold text-orange-500">WeryTec | Soluções Digitais</span>
+            <div className="flex items-center justify-between w-full md:w-auto">
+              <div className="flex items-center space-x-2 text-sm text-gray-400">
+                <span>Desenvolvido por</span>
+                <Heart className="w-4 h-4 text-red-500" />
+                <span className="font-semibold text-orange-500">WeryTec | Soluções Digitais</span>
+              </div>
+              <Link 
+                to="/admin" 
+                className="text-xs text-gray-500 hover:text-orange-500 transition-colors ml-4"
+              >
+                Admin
+              </Link>
             </div>
           </div>
         </div>

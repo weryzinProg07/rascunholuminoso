@@ -1,9 +1,23 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface GalleryItem {
+  id?: string;
+  title: string;
+  category: string;
+  image: string;
+  color: string;
+  description?: string;
+}
 
 const Gallery = () => {
-  const galleryItems = [
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Itens estáticos iniciais
+  const staticItems: GalleryItem[] = [
     {
       title: "Container Laranja - Nossa Sede",
       category: "Espaço Físico",
@@ -21,26 +35,56 @@ const Gallery = () => {
       category: "Identidade Visual",
       image: "/lovable-uploads/1ffdcb72-0326-435f-95bd-863af501cc71.png",
       color: "bg-pink-500"
-    },
-    {
-      title: "Flyer Promocional",
-      category: "Design Gráfico",
-      image: "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=400&h=300&fit=crop",
-      color: "bg-orange-600"
-    },
-    {
-      title: "Convite de Evento",
-      category: "Convites",
-      image: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400&h=300&fit=crop",
-      color: "bg-blue-600"
-    },
-    {
-      title: "Material Corporativo",
-      category: "Identidade Visual",
-      image: "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=400&h=300&fit=crop",
-      color: "bg-pink-600"
     }
   ];
+
+  useEffect(() => {
+    const fetchGalleryItems = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('gallery_uploads')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Erro ao buscar itens da galeria:', error);
+          setGalleryItems(staticItems);
+        } else {
+          // Combinar itens estáticos com itens do banco
+          const dbItems: GalleryItem[] = data.map((item, index) => ({
+            id: item.id,
+            title: item.title,
+            category: item.category || 'Trabalhos Realizados',
+            image: item.image_url,
+            color: ['bg-orange-600', 'bg-blue-600', 'bg-pink-600', 'bg-green-600', 'bg-purple-600'][index % 5],
+            description: item.description
+          }));
+
+          setGalleryItems([...staticItems, ...dbItems]);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar galeria:', error);
+        setGalleryItems(staticItems);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchGalleryItems();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <section id="galeria" className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Carregando galeria...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="galeria" className="py-20 bg-gray-50">
@@ -57,7 +101,7 @@ const Gallery = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {galleryItems.map((item, index) => (
             <div 
-              key={index}
+              key={item.id || index}
               className="group relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300"
             >
               <div className="aspect-[4/3] overflow-hidden">
@@ -74,6 +118,9 @@ const Gallery = () => {
                     {item.category}
                   </div>
                   <h3 className="text-lg font-bold mb-2">{item.title}</h3>
+                  {item.description && (
+                    <p className="text-sm mb-2 opacity-90">{item.description}</p>
+                  )}
                   <button className="flex items-center space-x-2 text-sm hover:text-orange-300 transition-colors">
                     <span>Ver detalhes</span>
                     <ExternalLink size={16} />
