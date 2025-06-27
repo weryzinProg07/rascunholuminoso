@@ -15,6 +15,14 @@ const Hero = () => {
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
+            <div className="flex justify-start mb-4">
+              <img 
+                src="/lovable-uploads/1ffdcb72-0326-435f-95bd-863af501cc71.png" 
+                alt="Rascunho Luminoso Logo" 
+                className="h-20 object-contain"
+              />
+            </div>
+            
             <div className="space-y-4">
               <h1 className="text-4xl md:text-5xl font-bold text-gray-800 leading-tight">
                 Bem-vindos à 
@@ -59,24 +67,15 @@ const Hero = () => {
           </div>
 
           <div className="relative">
-            <div className="bg-gradient-to-r from-orange-400 to-orange-500 rounded-2xl p-8 shadow-2xl">
-              <div className="bg-white rounded-xl p-6 space-y-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                </div>
-                <div className="space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-orange-200 rounded w-full"></div>
-                  <div className="h-4 bg-blue-200 rounded w-5/6"></div>
-                  <div className="h-4 bg-pink-200 rounded w-2/3"></div>
-                </div>
-                <div className="flex justify-center pt-4">
-                  <div className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                    Container Laranja - Humpata
-                  </div>
-                </div>
+            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+              <img 
+                src="/lovable-uploads/873aed8f-1846-43a9-9568-b9f29fefe083.png" 
+                alt="Container Laranja Rascunho Luminoso" 
+                className="w-full h-auto rounded-t-2xl"
+              />
+              <div className="p-6 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+                <h3 className="text-xl font-bold mb-2">Nosso Espaço Físico</h3>
+                <p>Container Laranja - Facilmente identificável na Humpata</p>
               </div>
             </div>
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-blue-500 rounded-full opacity-20"></div>

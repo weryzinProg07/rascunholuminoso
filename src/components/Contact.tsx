@@ -92,14 +92,15 @@ const Contact = () => {
                 </div>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-8">
-              <div className="text-center text-white">
-                <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <MapPin className="w-10 h-10" />
-                </div>
-                <h4 className="text-lg font-semibold mb-2">Container Laranja</h4>
-                <p className="text-orange-100">Rascunho Luminoso</p>
-                <p className="text-orange-100 text-sm mt-2">Humpata - Angola</p>
+            <div className="bg-gray-700 rounded-xl overflow-hidden">
+              <img 
+                src="/lovable-uploads/873aed8f-1846-43a9-9568-b9f29fefe083.png" 
+                alt="Container Laranja Rascunho Luminoso" 
+                className="w-full h-auto object-cover"
+              />
+              <div className="p-4 text-center bg-gradient-to-r from-orange-500 to-orange-600">
+                <h4 className="font-semibold">Container Laranja - Fácil de Encontrar!</h4>
+                <p className="text-sm text-orange-100">Rua do hospital municipal, Humpata</p>
               </div>
             </div>
           </div>

@@ -5,39 +5,39 @@ import { ExternalLink } from 'lucide-react';
 const Gallery = () => {
   const galleryItems = [
     {
+      title: "Container Laranja - Nossa Sede",
+      category: "Espaço Físico",
+      image: "/lovable-uploads/873aed8f-1846-43a9-9568-b9f29fefe083.png",
+      color: "bg-orange-500"
+    },
+    {
+      title: "Anúncio de Grande Abertura",
+      category: "Eventos",
+      image: "/lovable-uploads/3516f003-5aa0-4a67-8e73-b8da9fcc1f76.png",
+      color: "bg-blue-500"
+    },
+    {
+      title: "Logo Rascunho Luminoso",
+      category: "Identidade Visual",
+      image: "/lovable-uploads/1ffdcb72-0326-435f-95bd-863af501cc71.png",
+      color: "bg-pink-500"
+    },
+    {
       title: "Flyer Promocional",
       category: "Design Gráfico",
       image: "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=400&h=300&fit=crop",
-      color: "bg-orange-500"
+      color: "bg-orange-600"
     },
     {
       title: "Convite de Evento",
       category: "Convites",
       image: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400&h=300&fit=crop",
-      color: "bg-blue-500"
+      color: "bg-blue-600"
     },
     {
       title: "Material Corporativo",
       category: "Identidade Visual",
       image: "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=400&h=300&fit=crop",
-      color: "bg-pink-500"
-    },
-    {
-      title: "Cardápio Restaurante",
-      category: "Design Editorial",
-      image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop",
-      color: "bg-orange-600"
-    },
-    {
-      title: "Folder Informativo",
-      category: "Material Promocional",
-      image: "https://images.unsplash.com/photo-1542744094-3a31f272c490?w=400&h=300&fit=crop",
-      color: "bg-blue-600"
-    },
-    {
-      title: "Banner Publicitário",
-      category: "Publicidade",
-      image: "https://images.unsplash.com/photo-1572021335469-31706a17aaef?w=400&h=300&fit=crop",
       color: "bg-pink-600"
     }
   ];
@@ -50,7 +50,7 @@ const Gallery = () => {
             Nossa <span className="text-orange-500">Galeria</span>
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Confira alguns dos nossos trabalhos realizados com qualidade e criatividade
+            Confira nossos trabalhos e conheça nosso espaço físico - o Container Laranja
           </p>
         </div>
 

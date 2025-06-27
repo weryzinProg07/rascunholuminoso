@@ -10,9 +10,11 @@ const Footer = () => {
           {/* Logo e Descrição */}
           <div>
             <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold">RL</span>
-              </div>
+              <img 
+                src="/lovable-uploads/1ffdcb72-0326-435f-95bd-863af501cc71.png"
+                alt="Rascunho Luminoso Logo" 
+                className="w-14 h-14 object-contain"
+              />
               <div>
                 <h3 className="text-xl font-bold">Rascunho Luminoso</h3>
                 <p className="text-sm text-orange-500">Serviços Gráficos</p>
