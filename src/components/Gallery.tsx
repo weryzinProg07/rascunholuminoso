@@ -16,14 +16,8 @@ const Gallery = () => {
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Itens estáticos iniciais
+  // Itens estáticos iniciais - vamos remover o container laranja
   const staticItems: GalleryItem[] = [
-    {
-      title: "Container Laranja - Nossa Sede",
-      category: "Espaço Físico",
-      image: "/lovable-uploads/873aed8f-1846-43a9-9568-b9f29fefe083.png",
-      color: "bg-orange-500"
-    },
     {
       title: "Anúncio de Grande Abertura",
       category: "Eventos",
@@ -94,7 +88,7 @@ const Gallery = () => {
             Nossa <span className="text-orange-500">Galeria</span>
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Confira nossos trabalhos e conheça nosso espaço físico - o Container Laranja
+            Confira aqui alguns trabalhos feitos por nós
           </p>
         </div>
 

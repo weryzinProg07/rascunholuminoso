@@ -18,8 +18,12 @@ const Header = () => {
       <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">RL</span>
+            <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden">
+              <img 
+                src="/lovable-uploads/0126bf4f-e3d3-4872-8212-a0957cb88626.png" 
+                alt="Rascunho Luminoso Logo" 
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Rascunho Luminoso</h1>

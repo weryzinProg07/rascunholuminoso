@@ -17,7 +17,7 @@ const Hero = () => {
           <div className="space-y-8">
             <div className="flex justify-start mb-4">
               <img 
-                src="/lovable-uploads/1ffdcb72-0326-435f-95bd-863af501cc71.png" 
+                src="/lovable-uploads/0126bf4f-e3d3-4872-8212-a0957cb88626.png" 
                 alt="Rascunho Luminoso Logo" 
                 className="h-20 object-contain"
               />

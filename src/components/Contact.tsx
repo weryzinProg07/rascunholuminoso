@@ -110,10 +110,22 @@ const Contact = () => {
         <div className="text-center">
           <h3 className="text-2xl font-bold mb-6">Siga-nos nas Redes Sociais</h3>
           <div className="flex justify-center space-x-4">
-            <button className="bg-blue-600 hover:bg-blue-700 w-12 h-12 rounded-full flex items-center justify-center transition-colors">
+            <a 
+              href="https://www.facebook.com/rascunholuminoso" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-blue-600 hover:bg-blue-700 w-12 h-12 rounded-full flex items-center justify-center transition-colors"
+            >
               <Facebook className="w-6 h-6 text-white" />
-            </button>
-            <span className="text-gray-400 self-center">Em breve no Facebook!</span>
+            </a>
+            <a 
+              href="https://www.facebook.com/rascunholuminoso"
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-300 hover:text-blue-400 self-center transition-colors"
+            >
+              Rascunho Luminoso
+            </a>
           </div>
         </div>
       </div>
