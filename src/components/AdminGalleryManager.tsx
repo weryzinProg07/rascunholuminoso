@@ -18,6 +18,7 @@ interface GalleryItem {
 const AdminGalleryManager = () => {
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingItems, setDeletingItems] = useState<Set<string>>(new Set());
 
   const fetchGalleryItems = async () => {
     try {
@@ -48,18 +49,27 @@ const AdminGalleryManager = () => {
       return;
     }
 
+    // Adicionar item ao conjunto de itens sendo deletados
+    setDeletingItems(prev => new Set(prev).add(item.id));
+
     try {
       // Extrair nome do arquivo da URL
       const urlParts = item.image_url.split('/');
       const fileName = urlParts[urlParts.length - 1];
+      
+      // Remover parâmetros de query se existirem
+      const cleanFileName = fileName.split('?')[0];
+
+      console.log('Tentando deletar arquivo:', cleanFileName);
 
       // Deletar arquivo do storage
       const { error: storageError } = await supabase.storage
         .from('gallery-images')
-        .remove([fileName]);
+        .remove([cleanFileName]);
 
       if (storageError) {
-        console.error('Erro ao deletar arquivo:', storageError);
+        console.error('Erro ao deletar arquivo do storage:', storageError);
+        // Continuar mesmo com erro no storage, pois o arquivo pode não existir
       }
 
       // Deletar registro do banco de dados
@@ -86,6 +96,13 @@ const AdminGalleryManager = () => {
         title: "Erro ao excluir item",
         description: "Não foi possível excluir o item. Tente novamente.",
         variant: "destructive",
+      });
+    } finally {
+      // Remover item do conjunto de itens sendo deletados
+      setDeletingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(item.id);
+        return newSet;
       });
     }
   };
@@ -150,9 +167,10 @@ const AdminGalleryManager = () => {
                     variant="destructive"
                     size="sm"
                     className="w-full flex items-center space-x-2"
+                    disabled={deletingItems.has(item.id)}
                   >
                     <Trash2 size={14} />
-                    <span>Excluir</span>
+                    <span>{deletingItems.has(item.id) ? 'Excluindo...' : 'Excluir'}</span>
                   </Button>
                 </div>
               </div>

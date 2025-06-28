@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,6 @@ const AdminUpload = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Verificar se é uma imagem
       if (!file.type.startsWith('image/')) {
         toast({
           title: "Formato inválido",
@@ -32,7 +32,6 @@ const AdminUpload = () => {
         return;
       }
 
-      // Verificar tamanho (máximo 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "Arquivo muito grande",
@@ -44,7 +43,6 @@ const AdminUpload = () => {
 
       setSelectedFile(file);
       
-      // Criar preview
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreviewUrl(e.target?.result as string);
@@ -68,7 +66,6 @@ const AdminUpload = () => {
     setIsUploading(true);
 
     try {
-      // Upload da imagem para o Supabase Storage
       const fileName = `${Date.now()}-${selectedFile.name}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('gallery-images')
@@ -78,12 +75,10 @@ const AdminUpload = () => {
         throw uploadError;
       }
 
-      // Obter URL pública da imagem
       const { data: { publicUrl } } = supabase.storage
         .from('gallery-images')
         .getPublicUrl(fileName);
 
-      // Salvar informações no banco de dados
       const { error: dbError } = await supabase
         .from('gallery_uploads')
         .insert({
@@ -108,7 +103,6 @@ const AdminUpload = () => {
       setSelectedFile(null);
       setPreviewUrl(null);
       
-      // Limpar input de arquivo
       const fileInput = document.getElementById('file-upload') as HTMLInputElement;
       if (fileInput) {
         fileInput.value = '';
@@ -129,11 +123,10 @@ const AdminUpload = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4 max-w-4xl">
-        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center space-x-3">
             <img 
-              src="/lovable-uploads/0126bf4f-e3d3-4872-8212-a0957cb88626.png"
+              src="/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png"
               alt="Rascunho Luminoso Logo" 
               className="w-12 h-12 object-contain"
             />
@@ -154,7 +147,6 @@ const AdminUpload = () => {
           </Button>
         </div>
 
-        {/* Tabs para Upload e Gerenciar Galeria */}
         <Tabs defaultValue="upload" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="upload">Novo Upload</TabsTrigger>
@@ -162,7 +154,6 @@ const AdminUpload = () => {
           </TabsList>
 
           <TabsContent value="upload">
-            {/* Formulário de Upload */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -172,7 +163,6 @@ const AdminUpload = () => {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Seleção de arquivo */}
                   <div className="space-y-2">
                     <Label htmlFor="file-upload">Imagem *</Label>
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition-colors">
@@ -204,7 +194,6 @@ const AdminUpload = () => {
                     </div>
                   </div>
 
-                  {/* Título */}
                   <div className="space-y-2">
                     <Label htmlFor="title">Título do Trabalho *</Label>
                     <Input
@@ -217,7 +206,6 @@ const AdminUpload = () => {
                     />
                   </div>
 
-                  {/* Descrição */}
                   <div className="space-y-2">
                     <Label htmlFor="description">Descrição (opcional)</Label>
                     <Textarea
@@ -229,7 +217,6 @@ const AdminUpload = () => {
                     />
                   </div>
 
-                  {/* Botão de envio */}
                   <Button 
                     type="submit" 
                     className="w-full bg-orange-500 hover:bg-orange-600"

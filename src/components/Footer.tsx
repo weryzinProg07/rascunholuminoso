@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -8,11 +7,10 @@ const Footer = () => {
     <footer className="bg-gray-800 text-white py-8">
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-3 gap-8 mb-8">
-          {/* Logo e Descrição */}
           <div>
             <div className="flex items-center space-x-3 mb-4">
               <img 
-                src="/lovable-uploads/0126bf4f-e3d3-4872-8212-a0957cb88626.png"
+                src="/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png"
                 alt="Rascunho Luminoso Logo" 
                 className="w-14 h-14 object-contain"
               />
@@ -26,7 +24,6 @@ const Footer = () => {
             </p>
           </div>
 
-          {/* Serviços */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Nossos Serviços</h4>
             <ul className="space-y-2 text-sm text-gray-300">
@@ -38,7 +35,6 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Contato */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Contato</h4>
             <div className="space-y-2 text-sm text-gray-300">
@@ -50,7 +46,6 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Linha divisória */}
         <div className="border-t border-gray-700 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="text-sm text-gray-400">

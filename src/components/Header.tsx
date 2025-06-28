@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 
@@ -20,7 +19,7 @@ const Header = () => {
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden">
               <img 
-                src="/lovable-uploads/0126bf4f-e3d3-4872-8212-a0957cb88626.png" 
+                src="/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png" 
                 alt="Rascunho Luminoso Logo" 
                 className="w-full h-full object-contain"
               />
