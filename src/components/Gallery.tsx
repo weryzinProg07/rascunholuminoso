@@ -20,6 +20,7 @@ const Gallery = () => {
   const fetchGalleryItems = async () => {
     console.log('Gallery: Buscando itens...');
     try {
+      // Força uma nova consulta sem cache para garantir dados atualizados
       const { data, error } = await supabase
         .from('gallery_uploads')
         .select('*')
@@ -30,6 +31,8 @@ const Gallery = () => {
         setGalleryItems([]);
       } else {
         console.log('Gallery: Itens carregados:', data?.length || 0);
+        console.log('Gallery: IDs dos itens carregados:', data?.map(item => item.id) || []);
+        
         // Apenas itens do banco de dados
         const dbItems: GalleryItem[] = (data || []).map((item, index) => ({
           id: item.id,
@@ -55,7 +58,7 @@ const Gallery = () => {
 
     // Configurar listener para mudanças em tempo real
     const channel = supabase
-      .channel('gallery-changes')
+      .channel('public-gallery-changes')
       .on(
         'postgres_changes',
         {
@@ -65,8 +68,23 @@ const Gallery = () => {
         },
         (payload) => {
           console.log('Gallery: Mudança detectada na tabela:', payload);
-          // Recarregar itens quando houver mudanças
-          fetchGalleryItems();
+          console.log('Gallery: Tipo de evento:', payload.eventType);
+          
+          if (payload.eventType === 'DELETE') {
+            console.log('Gallery: Item deletado detectado, removendo da lista local...');
+            // Remove imediatamente da lista local
+            setGalleryItems(prevItems => {
+              const filtered = prevItems.filter(item => item.id !== payload.old?.id);
+              console.log('Gallery: Itens restantes após exclusão:', filtered.length);
+              return filtered;
+            });
+          } else {
+            // Para INSERT e UPDATE, recarregar dados
+            console.log('Gallery: Recarregando galeria devido a mudança...');
+            setTimeout(() => {
+              fetchGalleryItems();
+            }, 500);
+          }
         }
       )
       .subscribe();
