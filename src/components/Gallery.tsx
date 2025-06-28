@@ -56,31 +56,19 @@ const Gallery = () => {
   useEffect(() => {
     loadGalleryData();
 
-    // Listener para sincronização em tempo real
+    // Listener para sincronização em tempo real (apenas para inserções)
     const galleryChannel = supabase
       .channel('public-gallery-sync')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'gallery_uploads'
         },
         (payload) => {
-          console.log('🔄 Gallery: Mudança detectada:', payload.eventType);
-          
-          if (payload.eventType === 'DELETE') {
-            console.log('🗑️ Gallery: Removendo item deletado da visualização');
-            setGalleryItems(current => 
-              current.filter(item => item.id !== payload.old?.id)
-            );
-          } else if (payload.eventType === 'INSERT') {
-            console.log('➕ Gallery: Nova imagem adicionada, recarregando...');
-            setTimeout(() => loadGalleryData(), 1000);
-          } else if (payload.eventType === 'UPDATE') {
-            console.log('✏️ Gallery: Item atualizado, recarregando...');
-            setTimeout(() => loadGalleryData(), 800);
-          }
+          console.log('➕ Gallery: Nova imagem adicionada, recarregando...');
+          setTimeout(() => loadGalleryData(), 1000);
         }
       )
       .subscribe();
