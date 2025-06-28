@@ -5,6 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Trash2, Image as ImageIcon } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface GalleryItem {
   id: string;
@@ -45,31 +56,43 @@ const AdminGalleryManager = () => {
   };
 
   const deleteItem = async (item: GalleryItem) => {
-    if (!confirm(`Tem certeza que deseja excluir "${item.title}"?`)) {
-      return;
-    }
-
+    console.log('Iniciando exclusão do item:', item);
+    
     // Adicionar item ao conjunto de itens sendo deletados
     setDeletingItems(prev => new Set(prev).add(item.id));
 
     try {
-      // Extrair nome do arquivo da URL
+      // Melhor extração do nome do arquivo da URL
       const urlParts = item.image_url.split('/');
-      const fileName = urlParts[urlParts.length - 1];
+      let fileName = urlParts[urlParts.length - 1];
       
       // Remover parâmetros de query se existirem
-      const cleanFileName = fileName.split('?')[0];
+      fileName = fileName.split('?')[0];
+      
+      // Se o arquivo não tiver extensão, tentar extrair de uma parte anterior da URL
+      if (!fileName.includes('.')) {
+        // Procurar por um arquivo com extensão nas partes da URL
+        for (let i = urlParts.length - 1; i >= 0; i--) {
+          if (urlParts[i].includes('.') && (urlParts[i].includes('.jpg') || urlParts[i].includes('.jpeg') || urlParts[i].includes('.png') || urlParts[i].includes('.webp'))) {
+            fileName = urlParts[i].split('?')[0];
+            break;
+          }
+        }
+      }
 
-      console.log('Tentando deletar arquivo:', cleanFileName);
+      console.log('Nome do arquivo extraído:', fileName);
+      console.log('URL original:', item.image_url);
 
-      // Deletar arquivo do storage
+      // Tentar deletar arquivo do storage
       const { error: storageError } = await supabase.storage
         .from('gallery-images')
-        .remove([cleanFileName]);
+        .remove([fileName]);
 
       if (storageError) {
         console.error('Erro ao deletar arquivo do storage:', storageError);
-        // Continuar mesmo com erro no storage, pois o arquivo pode não existir
+        // Continuar mesmo com erro no storage, pois o arquivo pode não existir mais
+      } else {
+        console.log('Arquivo deletado do storage com sucesso');
       }
 
       // Deletar registro do banco de dados
@@ -79,12 +102,15 @@ const AdminGalleryManager = () => {
         .eq('id', item.id);
 
       if (dbError) {
+        console.error('Erro ao deletar do banco:', dbError);
         throw dbError;
       }
 
+      console.log('Registro deletado do banco com sucesso');
+
       toast({
-        title: "Item excluído com sucesso!",
-        description: "O item foi removido da galeria.",
+        title: "Imagem excluída com sucesso!",
+        description: "A imagem foi removida da galeria.",
       });
 
       // Atualizar lista
@@ -162,16 +188,37 @@ const AdminGalleryManager = () => {
                       {item.description}
                     </p>
                   )}
-                  <Button
-                    onClick={() => deleteItem(item)}
-                    variant="destructive"
-                    size="sm"
-                    className="w-full flex items-center space-x-2"
-                    disabled={deletingItems.has(item.id)}
-                  >
-                    <Trash2 size={14} />
-                    <span>{deletingItems.has(item.id) ? 'Excluindo...' : 'Excluir'}</span>
-                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="w-full flex items-center space-x-2"
+                        disabled={deletingItems.has(item.id)}
+                      >
+                        <Trash2 size={14} />
+                        <span>{deletingItems.has(item.id) ? 'Excluindo...' : 'Excluir'}</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Tem certeza que deseja excluir esta foto?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta ação não pode ser desfeita. A imagem "{item.title}" será permanentemente removida da galeria.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteItem(item)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Sim, excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             ))}
