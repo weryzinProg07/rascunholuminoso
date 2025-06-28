@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Trash2, Image as ImageIcon } from 'lucide-react';
+import { Trash2, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,8 +30,10 @@ const AdminGalleryManager = () => {
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingItems, setDeletingItems] = useState<Set<string>>(new Set());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchGalleryItems = async () => {
+    console.log('Buscando itens da galeria...');
     try {
       const { data, error } = await supabase
         .from('gallery_uploads')
@@ -39,9 +41,11 @@ const AdminGalleryManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
+        console.error('Erro na consulta:', error);
         throw error;
       }
 
+      console.log('Itens encontrados:', data?.length || 0);
       setGalleryItems(data || []);
     } catch (error) {
       console.error('Erro ao carregar itens da galeria:', error);
@@ -52,77 +56,100 @@ const AdminGalleryManager = () => {
       });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
+  const refreshGallery = async () => {
+    setIsRefreshing(true);
+    await fetchGalleryItems();
+  };
+
   const deleteItem = async (item: GalleryItem) => {
-    console.log('Iniciando exclusão do item:', item);
+    console.log('=== INICIANDO PROCESSO DE EXCLUSÃO ===');
+    console.log('Item a ser deletado:', {
+      id: item.id,
+      title: item.title,
+      image_url: item.image_url
+    });
     
     // Adicionar item ao conjunto de itens sendo deletados
     setDeletingItems(prev => new Set(prev).add(item.id));
 
     try {
-      // Melhor extração do nome do arquivo da URL
-      const urlParts = item.image_url.split('/');
-      let fileName = urlParts[urlParts.length - 1];
+      // Extração melhorada do nome do arquivo
+      const url = new URL(item.image_url);
+      const pathParts = url.pathname.split('/');
+      let fileName = pathParts[pathParts.length - 1];
       
       // Remover parâmetros de query se existirem
-      fileName = fileName.split('?')[0];
-      
-      // Se o arquivo não tiver extensão, tentar extrair de uma parte anterior da URL
-      if (!fileName.includes('.')) {
-        // Procurar por um arquivo com extensão nas partes da URL
-        for (let i = urlParts.length - 1; i >= 0; i--) {
-          if (urlParts[i].includes('.') && (urlParts[i].includes('.jpg') || urlParts[i].includes('.jpeg') || urlParts[i].includes('.png') || urlParts[i].includes('.webp'))) {
-            fileName = urlParts[i].split('?')[0];
-            break;
-          }
-        }
+      if (fileName.includes('?')) {
+        fileName = fileName.split('?')[0];
       }
 
-      console.log('Nome do arquivo extraído:', fileName);
-      console.log('URL original:', item.image_url);
+      console.log('Nome do arquivo para exclusão:', fileName);
+      console.log('Caminho completo da URL:', url.pathname);
 
-      // Tentar deletar arquivo do storage
-      const { error: storageError } = await supabase.storage
-        .from('gallery-images')
-        .remove([fileName]);
-
-      if (storageError) {
-        console.error('Erro ao deletar arquivo do storage:', storageError);
-        // Continuar mesmo com erro no storage, pois o arquivo pode não existir mais
-      } else {
-        console.log('Arquivo deletado do storage com sucesso');
-      }
-
-      // Deletar registro do banco de dados
+      // 1. PRIMEIRO: Deletar registro do banco de dados
+      console.log('Passo 1: Deletando registro do banco de dados...');
       const { error: dbError } = await supabase
         .from('gallery_uploads')
         .delete()
         .eq('id', item.id);
 
       if (dbError) {
-        console.error('Erro ao deletar do banco:', dbError);
-        throw dbError;
+        console.error('ERRO no banco de dados:', dbError);
+        throw new Error(`Erro ao deletar do banco: ${dbError.message}`);
       }
 
-      console.log('Registro deletado do banco com sucesso');
+      console.log('✅ Registro deletado do banco com sucesso');
 
-      toast({
-        title: "Imagem excluída com sucesso!",
-        description: "A imagem foi removida da galeria.",
+      // 2. SEGUNDO: Tentar deletar arquivo do storage
+      console.log('Passo 2: Tentando deletar arquivo do storage...');
+      const { error: storageError } = await supabase.storage
+        .from('gallery-images')
+        .remove([fileName]);
+
+      if (storageError) {
+        console.warn('Aviso - Erro ao deletar arquivo do storage:', storageError);
+        // Não falhar aqui, pois o registro já foi removido do banco
+      } else {
+        console.log('✅ Arquivo deletado do storage com sucesso');
+      }
+
+      // 3. TERCEIRO: Atualizar lista local IMEDIATAMENTE
+      console.log('Passo 3: Atualizando lista local...');
+      setGalleryItems(prevItems => {
+        const updatedItems = prevItems.filter(galleryItem => galleryItem.id !== item.id);
+        console.log('Lista atualizada:', updatedItems.length, 'itens restantes');
+        return updatedItems;
       });
 
-      // Atualizar lista
-      await fetchGalleryItems();
+      // 4. QUARTO: Recarregar do servidor para confirmar
+      console.log('Passo 4: Recarregando do servidor...');
+      setTimeout(() => {
+        fetchGalleryItems();
+      }, 500);
+
+      console.log('=== EXCLUSÃO CONCLUÍDA COM SUCESSO ===');
+
+      toast({
+        title: "✅ Imagem excluída com sucesso!",
+        description: `A imagem "${item.title}" foi removida da galeria.`,
+      });
 
     } catch (error) {
-      console.error('Erro ao excluir item:', error);
+      console.error('=== ERRO NO PROCESSO DE EXCLUSÃO ===');
+      console.error('Detalhes do erro:', error);
+      
       toast({
-        title: "Erro ao excluir item",
-        description: "Não foi possível excluir o item. Tente novamente.",
+        title: "❌ Erro ao excluir imagem",
+        description: error instanceof Error ? error.message : "Erro desconhecido. Tente novamente.",
         variant: "destructive",
       });
+
+      // Recarregar lista em caso de erro para garantir sincronização
+      fetchGalleryItems();
     } finally {
       // Remover item do conjunto de itens sendo deletados
       setDeletingItems(prev => {
@@ -159,16 +186,31 @@ const AdminGalleryManager = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <ImageIcon className="text-orange-500" size={24} />
-          <span>Gerenciar Galeria ({galleryItems.length} itens)</span>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center space-x-2">
+            <ImageIcon className="text-orange-500" size={24} />
+            <span>Gerenciar Galeria ({galleryItems.length} itens)</span>
+          </CardTitle>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={refreshGallery}
+            disabled={isRefreshing}
+            className="flex items-center space-x-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Atualizar</span>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {galleryItems.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">
-            Nenhum item encontrado na galeria.
-          </p>
+          <div className="text-center py-8">
+            <p className="text-gray-500 mb-4">Nenhum item encontrado na galeria.</p>
+            <Button onClick={refreshGallery} variant="outline">
+              Recarregar
+            </Button>
+          </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {galleryItems.map((item) => (
@@ -178,6 +220,10 @@ const AdminGalleryManager = () => {
                     src={item.image_url}
                     alt={item.title}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.log('Erro ao carregar imagem:', item.image_url);
+                      e.currentTarget.src = '/placeholder.svg';
+                    }}
                   />
                 </div>
                 <div className="p-4">
@@ -205,7 +251,7 @@ const AdminGalleryManager = () => {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Tem certeza que deseja excluir esta foto?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Esta ação não pode ser desfeita. A imagem "{item.title}" será permanentemente removida da galeria.
+                          Esta ação não pode ser desfeita. A imagem "{item.title}" será permanentemente removida da galeria e não aparecerá mais para os visitantes do site.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -214,7 +260,7 @@ const AdminGalleryManager = () => {
                           onClick={() => deleteItem(item)}
                           className="bg-red-600 hover:bg-red-700"
                         >
-                          Sim, excluir
+                          Sim, excluir definitivamente
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
