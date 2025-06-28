@@ -17,36 +17,36 @@ const Gallery = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
-  const fetchGalleryItems = async () => {
-    console.log('Gallery: Buscando itens...');
+  const loadGalleryData = async () => {
+    console.log('🔄 Gallery: Carregando dados da galeria...');
+    
     try {
-      // Força uma nova consulta sem cache para garantir dados atualizados
       const { data, error } = await supabase
         .from('gallery_uploads')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Gallery: Erro ao buscar itens:', error);
+        console.error('❌ Gallery: Erro na consulta:', error);
         setGalleryItems([]);
-      } else {
-        console.log('Gallery: Itens carregados:', data?.length || 0);
-        console.log('Gallery: IDs dos itens carregados:', data?.map(item => item.id) || []);
-        
-        // Apenas itens do banco de dados
-        const dbItems: GalleryItem[] = (data || []).map((item, index) => ({
-          id: item.id,
-          title: item.title,
-          category: item.category || 'Trabalhos Realizados',
-          image: item.image_url,
-          color: ['bg-orange-600', 'bg-blue-600', 'bg-pink-600', 'bg-green-600', 'bg-purple-600'][index % 5],
-          description: item.description
-        }));
-
-        setGalleryItems(dbItems);
+        return;
       }
+
+      console.log(`✅ Gallery: ${data?.length || 0} itens carregados`);
+      
+      const processedItems: GalleryItem[] = (data || []).map((item, index) => ({
+        id: item.id,
+        title: item.title,
+        category: item.category || 'Trabalhos Realizados',
+        image: item.image_url,
+        color: ['bg-orange-600', 'bg-blue-600', 'bg-pink-600', 'bg-green-600', 'bg-purple-600'][index % 5],
+        description: item.description
+      }));
+
+      setGalleryItems(processedItems);
+      
     } catch (error) {
-      console.error('Gallery: Erro ao carregar galeria:', error);
+      console.error('❌ Gallery: Falha no carregamento:', error);
       setGalleryItems([]);
     } finally {
       setIsLoading(false);
@@ -54,44 +54,40 @@ const Gallery = () => {
   };
 
   useEffect(() => {
-    fetchGalleryItems();
+    loadGalleryData();
 
-    // Configurar listener para mudanças em tempo real
-    const channel = supabase
-      .channel('public-gallery-changes')
+    // Listener para sincronização em tempo real
+    const galleryChannel = supabase
+      .channel('public-gallery-sync')
       .on(
         'postgres_changes',
         {
-          event: '*', // Escutar todos os eventos (INSERT, UPDATE, DELETE)
+          event: '*',
           schema: 'public',
           table: 'gallery_uploads'
         },
         (payload) => {
-          console.log('Gallery: Mudança detectada na tabela:', payload);
-          console.log('Gallery: Tipo de evento:', payload.eventType);
+          console.log('🔄 Gallery: Mudança detectada:', payload.eventType);
           
           if (payload.eventType === 'DELETE') {
-            console.log('Gallery: Item deletado detectado, removendo da lista local...');
-            // Remove imediatamente da lista local
-            setGalleryItems(prevItems => {
-              const filtered = prevItems.filter(item => item.id !== payload.old?.id);
-              console.log('Gallery: Itens restantes após exclusão:', filtered.length);
-              return filtered;
-            });
-          } else {
-            // Para INSERT e UPDATE, recarregar dados
-            console.log('Gallery: Recarregando galeria devido a mudança...');
-            setTimeout(() => {
-              fetchGalleryItems();
-            }, 500);
+            console.log('🗑️ Gallery: Removendo item deletado da visualização');
+            setGalleryItems(current => 
+              current.filter(item => item.id !== payload.old?.id)
+            );
+          } else if (payload.eventType === 'INSERT') {
+            console.log('➕ Gallery: Nova imagem adicionada, recarregando...');
+            setTimeout(() => loadGalleryData(), 1000);
+          } else if (payload.eventType === 'UPDATE') {
+            console.log('✏️ Gallery: Item atualizado, recarregando...');
+            setTimeout(() => loadGalleryData(), 800);
           }
         }
       )
       .subscribe();
 
     return () => {
-      console.log('Gallery: Removendo listener');
-      supabase.removeChannel(channel);
+      console.log('🔌 Gallery: Desconectando listener');
+      supabase.removeChannel(galleryChannel);
     };
   }, []);
 
@@ -108,7 +104,6 @@ const Gallery = () => {
     );
   }
 
-  // Limitar a 6 fotos inicialmente
   const itemsToShow = showAll ? galleryItems : galleryItems.slice(0, 6);
   const hasMoreItems = galleryItems.length > 6;
 
@@ -143,8 +138,9 @@ const Gallery = () => {
                       src={item.image}
                       alt={item.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      loading="lazy"
                       onError={(e) => {
-                        console.log('Gallery: Erro ao carregar imagem:', item.image);
+                        console.log('🖼️ Gallery: Erro ao carregar imagem:', item.image);
                         e.currentTarget.src = '/placeholder.svg';
                       }}
                     />
