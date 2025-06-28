@@ -67,19 +67,13 @@ const AdminGalleryManager = () => {
     await loadGalleryItems();
   };
 
-  const permanentlyDeleteImage = async (item: GalleryItem) => {
-    console.log('🗑️ INICIANDO EXCLUSÃO DEFINITIVA');
-    console.log('📄 Item:', { id: item.id, title: item.title, url: item.image_url });
+  const deleteImage = async (item: GalleryItem) => {
+    console.log('🗑️ INICIANDO EXCLUSÃO:', { id: item.id, title: item.title });
     
-    // Marcar como sendo deletado
     setDeletingItems(prev => new Set(prev).add(item.id));
 
     try {
-      // PASSO 1: Remover do estado local imediatamente para feedback visual
-      console.log('1️⃣ Removendo da interface...');
-      setGalleryItems(current => current.filter(img => img.id !== item.id));
-
-      // PASSO 2: Extrair nome do arquivo para exclusão do storage
+      // PASSO 1: Extrair nome do arquivo para exclusão do storage
       const imageUrl = new URL(item.image_url);
       const fileName = imageUrl.pathname.split('/').pop()?.split('?')[0];
       
@@ -88,8 +82,8 @@ const AdminGalleryManager = () => {
       }
       console.log('📂 Arquivo a ser deletado:', fileName);
 
-      // PASSO 3: Deletar registro do banco de dados
-      console.log('2️⃣ Deletando do banco de dados...');
+      // PASSO 2: Deletar do banco de dados PRIMEIRO
+      console.log('🗄️ Deletando do banco de dados...');
       const { error: dbDeleteError } = await supabase
         .from('gallery_uploads')
         .delete()
@@ -98,36 +92,26 @@ const AdminGalleryManager = () => {
       if (dbDeleteError) {
         throw new Error(`Falha no banco: ${dbDeleteError.message}`);
       }
-      console.log('✅ Registro removido do banco');
+      console.log('✅ Registro removido do banco de dados');
 
-      // PASSO 4: Deletar arquivo físico do storage
-      console.log('3️⃣ Deletando arquivo do storage...');
+      // PASSO 3: Deletar do storage
+      console.log('🗃️ Deletando arquivo do storage...');
       const { error: storageDeleteError } = await supabase.storage
         .from('gallery-images')
         .remove([fileName]);
 
       if (storageDeleteError) {
         console.warn('⚠️ Aviso no storage:', storageDeleteError);
-        // Não falhar aqui, pois o registro já foi removido
+        // Continuar mesmo com erro no storage, pois o banco já foi limpo
       } else {
         console.log('✅ Arquivo removido do storage');
       }
 
-      // PASSO 5: Verificação final (aguardar propagação)
-      console.log('4️⃣ Verificando exclusão...');
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const { data: checkData } = await supabase
-        .from('gallery_uploads')
-        .select('id')
-        .eq('id', item.id)
-        .maybeSingle();
+      // PASSO 4: Atualizar frontend APÓS sucesso no banco
+      console.log('🖥️ Atualizando interface...');
+      setGalleryItems(current => current.filter(img => img.id !== item.id));
 
-      if (checkData) {
-        throw new Error('Item ainda existe no banco após exclusão');
-      }
-
-      console.log('🎉 EXCLUSÃO DEFINITIVA CONCLUÍDA COM SUCESSO');
+      console.log('🎉 EXCLUSÃO CONCLUÍDA COM SUCESSO');
       
       toast({
         title: "✅ Imagem excluída com sucesso!",
@@ -138,16 +122,6 @@ const AdminGalleryManager = () => {
     } catch (error) {
       console.error('💥 ERRO NA EXCLUSÃO:', error);
       
-      // Restaurar item na lista em caso de erro
-      setGalleryItems(current => {
-        if (current.find(img => img.id === item.id)) {
-          return current; // Já existe
-        }
-        return [...current, item].sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-      });
-      
       toast({
         title: "❌ Erro ao excluir imagem",
         description: error instanceof Error ? error.message : "Erro desconhecido",
@@ -155,10 +129,9 @@ const AdminGalleryManager = () => {
         duration: 6000,
       });
 
-      // Recarregar dados após erro
-      setTimeout(() => loadGalleryItems(), 2000);
+      // Recarregar dados em caso de erro
+      setTimeout(() => loadGalleryItems(), 1000);
     } finally {
-      // Remover do conjunto de deletando
       setDeletingItems(prev => {
         const updated = new Set(prev);
         updated.delete(item.id);
@@ -176,22 +149,27 @@ const AdminGalleryManager = () => {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'DELETE',
           schema: 'public',
           table: 'gallery_uploads'
         },
         (payload) => {
-          console.log('🔄 Mudança detectada:', payload.eventType);
-          
-          if (payload.eventType === 'DELETE') {
-            console.log('🗑️ Exclusão detectada, atualizando lista...');
-            setGalleryItems(current => 
-              current.filter(item => item.id !== payload.old?.id)
-            );
-          } else if (payload.eventType === 'INSERT') {
-            console.log('➕ Inserção detectada, recarregando...');
-            setTimeout(() => loadGalleryItems(), 800);
-          }
+          console.log('🔄 Exclusão detectada via realtime:', payload.old?.id);
+          setGalleryItems(current => 
+            current.filter(item => item.id !== payload.old?.id)
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'gallery_uploads'
+        },
+        () => {
+          console.log('➕ Inserção detectada, recarregando...');
+          setTimeout(() => loadGalleryItems(), 800);
         }
       )
       .subscribe();
@@ -295,7 +273,7 @@ const AdminGalleryManager = () => {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => permanentlyDeleteImage(item)}
+                          onClick={() => deleteImage(item)}
                           className="bg-red-600 hover:bg-red-700"
                         >
                           Sim, excluir definitivamente
