@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -56,7 +55,7 @@ const Gallery = () => {
   useEffect(() => {
     loadGalleryData();
 
-    // Listener para sincronização em tempo real (apenas para inserções)
+    // Listener para sincronização em tempo real (apenas para inserções e updates)
     const galleryChannel = supabase
       .channel('public-gallery-sync')
       .on(
@@ -69,6 +68,19 @@ const Gallery = () => {
         (payload) => {
           console.log('➕ Gallery: Nova imagem adicionada, recarregando...');
           setTimeout(() => loadGalleryData(), 1000);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'gallery_uploads'
+        },
+        (payload) => {
+          console.log('🗑️ Gallery: Imagem removida, atualizando lista...');
+          // Remove da lista local sem recarregar tudo
+          setGalleryItems(current => current.filter(item => item.id !== payload.old.id));
         }
       )
       .subscribe();

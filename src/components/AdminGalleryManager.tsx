@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +32,7 @@ const AdminGalleryManager = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadGalleryItems = useCallback(async () => {
-    console.log('🔄 Carregando itens da galeria...');
+    console.log('🔄 Admin: Carregando itens da galeria...');
     
     try {
       const { data, error } = await supabase
@@ -42,14 +41,14 @@ const AdminGalleryManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('❌ Erro ao carregar:', error);
+        console.error('❌ Admin: Erro ao carregar:', error);
         throw error;
       }
 
-      console.log(`✅ ${data?.length || 0} itens carregados`);
+      console.log(`✅ Admin: ${data?.length || 0} itens carregados`);
       setGalleryItems(data || []);
     } catch (error) {
-      console.error('❌ Falha no carregamento:', error);
+      console.error('❌ Admin: Falha no carregamento:', error);
       toast({
         title: "Erro ao carregar galeria",
         description: "Não foi possível carregar os itens da galeria.",
@@ -68,25 +67,32 @@ const AdminGalleryManager = () => {
   }, [loadGalleryItems]);
 
   const deleteImage = useCallback(async (item: GalleryItem) => {
-    console.log('🗑️ Iniciando exclusão de:', item.title);
+    console.log('🗑️ Admin: Iniciando exclusão de:', item.title, 'ID:', item.id);
     
     setDeletingItems(prev => new Set(prev).add(item.id));
 
     try {
-      // 1. Deletar do banco de dados primeiro
+      // 1. Primeiro remove da lista local para feedback imediato
+      setGalleryItems(current => current.filter(img => img.id !== item.id));
+
+      // 2. Delete do banco de dados
       const { error: dbError } = await supabase
         .from('gallery_uploads')
         .delete()
         .eq('id', item.id);
 
       if (dbError) {
-        console.error('❌ Erro ao deletar do banco:', dbError);
+        console.error('❌ Admin: Erro ao deletar do banco:', dbError);
+        // Reverte a remoção local se falhou no banco
+        setGalleryItems(current => [...current, item].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ));
         throw new Error(`Erro ao excluir do banco: ${dbError.message}`);
       }
 
-      console.log('✅ Deletado do banco de dados');
+      console.log('✅ Admin: Deletado do banco de dados com sucesso');
 
-      // 2. Tentar deletar arquivo do storage
+      // 3. Tentar deletar arquivo do storage (não crítico)
       try {
         const url = new URL(item.image_url);
         const fileName = url.pathname.split('/').pop()?.split('?')[0];
@@ -97,36 +103,30 @@ const AdminGalleryManager = () => {
             .remove([fileName]);
 
           if (storageError) {
-            console.warn('⚠️ Erro ao deletar arquivo do storage:', storageError);
+            console.warn('⚠️ Admin: Erro ao deletar arquivo do storage:', storageError);
           } else {
-            console.log('✅ Arquivo deletado do storage');
+            console.log('✅ Admin: Arquivo deletado do storage');
           }
         }
       } catch (storageError) {
-        console.warn('⚠️ Erro no storage (continuando):', storageError);
+        console.warn('⚠️ Admin: Erro no storage (não crítico):', storageError);
       }
-
-      // 3. Atualizar a lista local
-      setGalleryItems(current => current.filter(img => img.id !== item.id));
 
       toast({
         title: "✅ Imagem excluída!",
-        description: `"${item.title}" foi removida da galeria.`,
+        description: `"${item.title}" foi removida permanentemente da galeria.`,
       });
 
-      console.log('🎉 Exclusão concluída com sucesso');
+      console.log('🎉 Admin: Exclusão concluída com sucesso');
 
     } catch (error) {
-      console.error('💥 Erro na exclusão:', error);
+      console.error('💥 Admin: Erro na exclusão:', error);
       
       toast({
         title: "❌ Erro na exclusão",
         description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: "destructive",
       });
-
-      // Recarregar para sincronizar
-      setTimeout(() => loadGalleryItems(), 1000);
     } finally {
       setDeletingItems(prev => {
         const updated = new Set(prev);
@@ -134,11 +134,12 @@ const AdminGalleryManager = () => {
         return updated;
       });
     }
-  }, [loadGalleryItems]);
+  }, []);
 
   useEffect(() => {
     loadGalleryItems();
 
+    // Listener para novas inserções apenas (não para deletions)
     const realtimeChannel = supabase
       .channel('admin-gallery-realtime')
       .on(
@@ -149,14 +150,14 @@ const AdminGalleryManager = () => {
           table: 'gallery_uploads'
         },
         () => {
-          console.log('➕ Nova inserção detectada, recarregando...');
+          console.log('➕ Admin: Nova inserção detectada, recarregando...');
           setTimeout(() => loadGalleryItems(), 1000);
         }
       )
       .subscribe();
 
     return () => {
-      console.log('🔌 Desconectando listener');
+      console.log('🔌 Admin: Desconectando listener');
       supabase.removeChannel(realtimeChannel);
     };
   }, [loadGalleryItems]);
@@ -218,7 +219,7 @@ const AdminGalleryManager = () => {
                     alt={item.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      console.log('🖼️ Erro ao carregar imagem:', item.image_url);
+                      console.log('🖼️ Admin: Erro ao carregar imagem:', item.image_url);
                       e.currentTarget.src = '/placeholder.svg';
                     }}
                   />
@@ -246,10 +247,10 @@ const AdminGalleryManager = () => {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir imagem?</AlertDialogTitle>
+                        <AlertDialogTitle>Excluir imagem permanentemente?</AlertDialogTitle>
                         <AlertDialogDescription>
                           Tem certeza que deseja excluir "{item.title}"? 
-                          Esta ação não pode ser desfeita.
+                          Esta ação não pode ser desfeita e a imagem será removida permanentemente.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -258,7 +259,7 @@ const AdminGalleryManager = () => {
                           onClick={() => deleteImage(item)}
                           className="bg-red-600 hover:bg-red-700"
                         >
-                          Sim, excluir
+                          Sim, excluir permanentemente
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
