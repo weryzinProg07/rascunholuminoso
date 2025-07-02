@@ -10,13 +10,18 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+interface FileData {
+  name: string;
+  url: string;
+}
+
 interface OrderRequest {
   service: string;
   name: string;
   email: string;
   phone: string;
   description: string;
-  fileNames?: string[];
+  files?: FileData[];
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -47,12 +52,22 @@ const handler = async (req: Request): Promise<Response> => {
           </p>
         </div>
 
-        ${orderData.fileNames && orderData.fileNames.length > 0 ? `
+        ${orderData.files && orderData.files.length > 0 ? `
         <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="color: #374151; margin-top: 0;">Arquivos Anexados:</h3>
-          <ul>
-            ${orderData.fileNames.map(fileName => `<li>${fileName}</li>`).join('')}
-          </ul>
+          ${orderData.files.map(file => `
+            <div style="margin-bottom: 15px; padding: 10px; background-color: white; border-radius: 4px;">
+              <p style="margin: 0; font-weight: bold;">${file.name}</p>
+              ${file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? `
+                <img src="${file.url}" alt="${file.name}" style="max-width: 300px; max-height: 200px; margin-top: 10px; border-radius: 4px;">
+              ` : ''}
+              <p style="margin: 5px 0 0 0;">
+                <a href="${file.url}" target="_blank" style="color: #f97316; text-decoration: none;">
+                  📁 Ver arquivo
+                </a>
+              </p>
+            </div>
+          `).join('')}
         </div>
         ` : ''}
 

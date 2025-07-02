@@ -40,6 +40,35 @@ const OrderForm = () => {
     }));
   };
 
+  const uploadFiles = async (files: FileList) => {
+    const uploadedFiles = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileName = `orders/${Date.now()}_${file.name}`;
+      
+      const { data, error } = await supabase.storage
+        .from('gallery-images')
+        .upload(fileName, file);
+      
+      if (error) {
+        console.error('Erro ao fazer upload do arquivo:', error);
+        throw error;
+      }
+      
+      const { data: publicUrl } = supabase.storage
+        .from('gallery-images')
+        .getPublicUrl(fileName);
+      
+      uploadedFiles.push({
+        name: file.name,
+        url: publicUrl.publicUrl
+      });
+    }
+    
+    return uploadedFiles;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -48,6 +77,13 @@ const OrderForm = () => {
     setIsSubmitting(true);
 
     try {
+      let uploadedFiles = [];
+      
+      // Upload files se existirem
+      if (formData.files && formData.files.length > 0) {
+        uploadedFiles = await uploadFiles(formData.files);
+      }
+
       // Preparar dados para envio
       const orderData = {
         service: formData.service,
@@ -55,7 +91,7 @@ const OrderForm = () => {
         email: formData.email,
         phone: formData.phone,
         description: formData.description,
-        fileNames: formData.files ? Array.from(formData.files).map(file => file.name) : []
+        files: uploadedFiles
       };
 
       // Enviar email através da edge function
