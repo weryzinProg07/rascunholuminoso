@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,7 +30,6 @@ const AdminGalleryManager = () => {
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingItems, setDeletingItems] = useState<Set<string>>(new Set());
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadGalleryItems = useCallback(async () => {
     console.log('🔄 Admin: Carregando itens da galeria...');
@@ -57,74 +57,42 @@ const AdminGalleryManager = () => {
       setGalleryItems([]);
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
   }, []);
 
-  const refreshGallery = useCallback(async () => {
-    setIsRefreshing(true);
-    await loadGalleryItems();
-  }, [loadGalleryItems]);
-
   const deleteImage = useCallback(async (item: GalleryItem) => {
-    console.log('🗑️ Admin: Iniciando exclusão de:', item.title, 'ID:', item.id);
+    console.log('🗑️ Admin: Deletando imagem com ID:', item.id);
     
     setDeletingItems(prev => new Set(prev).add(item.id));
 
     try {
-      // 1. Primeiro remove da lista local para feedback imediato
-      setGalleryItems(current => current.filter(img => img.id !== item.id));
-
-      // 2. Delete do banco de dados
-      const { error: dbError } = await supabase
+      // Deletar do banco de dados usando o ID
+      const { error } = await supabase
         .from('gallery_uploads')
         .delete()
         .eq('id', item.id);
 
-      if (dbError) {
-        console.error('❌ Admin: Erro ao deletar do banco:', dbError);
-        // Reverte a remoção local se falhou no banco
-        setGalleryItems(current => [...current, item].sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        ));
-        throw new Error(`Erro ao excluir do banco: ${dbError.message}`);
+      if (error) {
+        console.error('❌ Erro ao deletar do banco:', error);
+        throw error;
       }
 
-      console.log('✅ Admin: Deletado do banco de dados com sucesso');
+      console.log('✅ Imagem deletada do banco com sucesso');
 
-      // 3. Tentar deletar arquivo do storage (não crítico)
-      try {
-        const url = new URL(item.image_url);
-        const fileName = url.pathname.split('/').pop()?.split('?')[0];
-        
-        if (fileName) {
-          const { error: storageError } = await supabase.storage
-            .from('gallery-images')
-            .remove([fileName]);
-
-          if (storageError) {
-            console.warn('⚠️ Admin: Erro ao deletar arquivo do storage:', storageError);
-          } else {
-            console.log('✅ Admin: Arquivo deletado do storage');
-          }
-        }
-      } catch (storageError) {
-        console.warn('⚠️ Admin: Erro no storage (não crítico):', storageError);
-      }
+      // Atualizar lista local imediatamente
+      setGalleryItems(current => current.filter(img => img.id !== item.id));
 
       toast({
         title: "✅ Imagem excluída!",
-        description: `"${item.title}" foi removida permanentemente da galeria.`,
+        description: `"${item.title}" foi removida permanentemente.`,
       });
 
-      console.log('🎉 Admin: Exclusão concluída com sucesso');
-
     } catch (error) {
-      console.error('💥 Admin: Erro na exclusão:', error);
+      console.error('❌ Erro na exclusão:', error);
       
       toast({
         title: "❌ Erro na exclusão",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
+        description: "Não foi possível excluir a imagem.",
         variant: "destructive",
       });
     } finally {
@@ -138,28 +106,6 @@ const AdminGalleryManager = () => {
 
   useEffect(() => {
     loadGalleryItems();
-
-    // Listener para novas inserções apenas (não para deletions)
-    const realtimeChannel = supabase
-      .channel('admin-gallery-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'gallery_uploads'
-        },
-        () => {
-          console.log('➕ Admin: Nova inserção detectada, recarregando...');
-          setTimeout(() => loadGalleryItems(), 1000);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('🔌 Admin: Desconectando listener');
-      supabase.removeChannel(realtimeChannel);
-    };
   }, [loadGalleryItems]);
 
   if (isLoading) {
@@ -192,11 +138,10 @@ const AdminGalleryManager = () => {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={refreshGallery}
-            disabled={isRefreshing}
+            onClick={loadGalleryItems}
             className="flex items-center space-x-2"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className="w-4 h-4" />
             <span>Atualizar</span>
           </Button>
         </div>
@@ -205,7 +150,7 @@ const AdminGalleryManager = () => {
         {galleryItems.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500 mb-4">Nenhum item encontrado na galeria.</p>
-            <Button onClick={refreshGallery} variant="outline">
+            <Button onClick={loadGalleryItems} variant="outline">
               Recarregar
             </Button>
           </div>
@@ -250,7 +195,7 @@ const AdminGalleryManager = () => {
                         <AlertDialogTitle>Excluir imagem permanentemente?</AlertDialogTitle>
                         <AlertDialogDescription>
                           Tem certeza que deseja excluir "{item.title}"? 
-                          Esta ação não pode ser desfeita e a imagem será removida permanentemente.
+                          Esta ação não pode ser desfeita.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
