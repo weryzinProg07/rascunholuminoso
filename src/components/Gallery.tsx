@@ -17,8 +17,8 @@ const Gallery = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
-  const loadGalleryData = async () => {
-    console.log('🔄 Gallery: Carregando dados da galeria...');
+  const fetchGalleryData = async () => {
+    console.log('🔄 Gallery: Buscando dados atualizados...');
     
     try {
       const { data, error } = await supabase
@@ -32,7 +32,7 @@ const Gallery = () => {
         return;
       }
 
-      console.log(`✅ Gallery: ${data?.length || 0} itens carregados`);
+      console.log(`✅ Gallery: ${data?.length || 0} itens encontrados`);
       
       const processedItems: GalleryItem[] = (data || []).map((item, index) => ({
         id: item.id,
@@ -46,7 +46,7 @@ const Gallery = () => {
       setGalleryItems(processedItems);
       
     } catch (error) {
-      console.error('❌ Gallery: Falha no carregamento:', error);
+      console.error('❌ Gallery: Falha ao buscar dados:', error);
       setGalleryItems([]);
     } finally {
       setIsLoading(false);
@@ -54,7 +54,7 @@ const Gallery = () => {
   };
 
   useEffect(() => {
-    loadGalleryData();
+    fetchGalleryData();
   }, []);
 
   if (isLoading) {

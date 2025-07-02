@@ -61,37 +61,42 @@ const AdminGalleryManager = () => {
     }
   };
 
-  const deleteItem = async (itemId: string, itemTitle: string) => {
-    console.log('🗑️ Admin: Iniciando exclusão do item:', itemId);
+  const permanentDeleteItem = async (itemId: string, itemTitle: string) => {
+    console.log('🗑️ Admin: Iniciando exclusão PERMANENTE do item:', itemId);
     setDeletingItemId(itemId);
 
     try {
-      // Deletar do banco de dados
-      const { error } = await supabase
+      // 1. Executar DELETE diretamente no banco
+      const { error: deleteError } = await supabase
         .from('gallery_uploads')
         .delete()
         .eq('id', itemId);
 
-      if (error) {
-        console.error('❌ Erro ao deletar do banco:', error);
-        throw error;
+      if (deleteError) {
+        console.error('❌ Erro ao deletar do banco:', deleteError);
+        throw deleteError;
       }
 
-      console.log('✅ Item deletado do banco com sucesso');
+      console.log('✅ Item PERMANENTEMENTE deletado do banco');
 
-      // Remover da lista local imediatamente
-      setGalleryItems(prevItems => prevItems.filter(item => item.id !== itemId));
+      // 2. Atualizar estado local IMEDIATAMENTE
+      setGalleryItems(prevItems => {
+        const updatedItems = prevItems.filter(item => item.id !== itemId);
+        console.log(`📝 Estado atualizado: ${updatedItems.length} itens restantes`);
+        return updatedItems;
+      });
 
+      // 3. Confirmar exclusão
       toast({
-        title: "✅ Item excluído!",
-        description: `"${itemTitle}" foi removido permanentemente.`,
+        title: "✅ Exclusão bem-sucedida!",
+        description: `"${itemTitle}" foi removido PERMANENTEMENTE da galeria.`,
       });
 
     } catch (error) {
-      console.error('❌ Erro na exclusão:', error);
+      console.error('❌ FALHA na exclusão permanente:', error);
       toast({
         title: "❌ Erro na exclusão",
-        description: "Não foi possível excluir o item.",
+        description: "Não foi possível excluir o item permanentemente.",
         variant: "destructive",
       });
     } finally {
@@ -182,24 +187,26 @@ const AdminGalleryManager = () => {
                         disabled={deletingItemId === item.id}
                       >
                         <Trash2 size={14} />
-                        <span>{deletingItemId === item.id ? 'Excluindo...' : 'Excluir'}</span>
+                        <span>{deletingItemId === item.id ? 'Excluindo permanentemente...' : 'Excluir Permanentemente'}</span>
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir item permanentemente?</AlertDialogTitle>
+                        <AlertDialogTitle>⚠️ Exclusão Permanente</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Tem certeza que deseja excluir "{item.title}"? 
-                          Esta ação não pode ser desfeita.
+                          <strong>ATENÇÃO:</strong> Tem certeza que deseja excluir "{item.title}" PERMANENTEMENTE? 
+                          <br /><br />
+                          Esta ação é <strong>IRREVERSÍVEL</strong> e o item será removido definitivamente do banco de dados.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => deleteItem(item.id, item.title)}
+                          onClick={() => permanentDeleteItem(item.id, item.title)}
                           className="bg-red-600 hover:bg-red-700"
+                          disabled={deletingItemId === item.id}
                         >
-                          Sim, excluir permanentemente
+                          {deletingItemId === item.id ? 'Excluindo...' : 'Sim, excluir PERMANENTEMENTE'}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
