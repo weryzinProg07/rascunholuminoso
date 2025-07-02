@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
@@ -29,10 +29,11 @@ interface GalleryItem {
 const AdminGalleryManager = () => {
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [deletingItems, setDeletingItems] = useState<Set<string>>(new Set());
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
-  const loadGalleryItems = useCallback(async () => {
+  const loadGalleryItems = async () => {
     console.log('🔄 Admin: Carregando itens da galeria...');
+    setIsLoading(true);
     
     try {
       const { data, error } = await supabase
@@ -58,55 +59,49 @@ const AdminGalleryManager = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
-  const deleteImage = useCallback(async (item: GalleryItem) => {
-    console.log('🗑️ Admin: Deletando imagem com ID:', item.id);
-    
-    setDeletingItems(prev => new Set(prev).add(item.id));
+  const deleteItem = async (itemId: string, itemTitle: string) => {
+    console.log('🗑️ Admin: Iniciando exclusão do item:', itemId);
+    setDeletingItemId(itemId);
 
     try {
-      // Deletar do banco de dados usando o ID
+      // Deletar do banco de dados
       const { error } = await supabase
         .from('gallery_uploads')
         .delete()
-        .eq('id', item.id);
+        .eq('id', itemId);
 
       if (error) {
         console.error('❌ Erro ao deletar do banco:', error);
         throw error;
       }
 
-      console.log('✅ Imagem deletada do banco com sucesso');
+      console.log('✅ Item deletado do banco com sucesso');
 
-      // Atualizar lista local imediatamente
-      setGalleryItems(current => current.filter(img => img.id !== item.id));
+      // Remover da lista local imediatamente
+      setGalleryItems(prevItems => prevItems.filter(item => item.id !== itemId));
 
       toast({
-        title: "✅ Imagem excluída!",
-        description: `"${item.title}" foi removida permanentemente.`,
+        title: "✅ Item excluído!",
+        description: `"${itemTitle}" foi removido permanentemente.`,
       });
 
     } catch (error) {
       console.error('❌ Erro na exclusão:', error);
-      
       toast({
         title: "❌ Erro na exclusão",
-        description: "Não foi possível excluir a imagem.",
+        description: "Não foi possível excluir o item.",
         variant: "destructive",
       });
     } finally {
-      setDeletingItems(prev => {
-        const updated = new Set(prev);
-        updated.delete(item.id);
-        return updated;
-      });
+      setDeletingItemId(null);
     }
-  }, []);
+  };
 
   useEffect(() => {
     loadGalleryItems();
-  }, [loadGalleryItems]);
+  }, []);
 
   if (isLoading) {
     return (
@@ -184,15 +179,15 @@ const AdminGalleryManager = () => {
                         variant="destructive"
                         size="sm"
                         className="w-full flex items-center space-x-2"
-                        disabled={deletingItems.has(item.id)}
+                        disabled={deletingItemId === item.id}
                       >
                         <Trash2 size={14} />
-                        <span>{deletingItems.has(item.id) ? 'Excluindo...' : 'Excluir'}</span>
+                        <span>{deletingItemId === item.id ? 'Excluindo...' : 'Excluir'}</span>
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir imagem permanentemente?</AlertDialogTitle>
+                        <AlertDialogTitle>Excluir item permanentemente?</AlertDialogTitle>
                         <AlertDialogDescription>
                           Tem certeza que deseja excluir "{item.title}"? 
                           Esta ação não pode ser desfeita.
@@ -201,7 +196,7 @@ const AdminGalleryManager = () => {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => deleteImage(item)}
+                          onClick={() => deleteItem(item.id, item.title)}
                           className="bg-red-600 hover:bg-red-700"
                         >
                           Sim, excluir permanentemente

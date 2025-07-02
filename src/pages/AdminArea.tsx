@@ -2,12 +2,12 @@
 import React from 'react';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import AdminLogin from '@/components/AdminLogin';
-import AdminUpload from '@/components/AdminUpload';
+import AdminGalleryManager from '@/components/AdminGalleryManager';
 
 const AdminArea = () => {
   const { isAuthenticated } = useAdminAuth();
 
-  return isAuthenticated ? <AdminUpload /> : <AdminLogin />;
+  return isAuthenticated ? <AdminGalleryManager /> : <AdminLogin />;
 };
 
 export default AdminArea;
