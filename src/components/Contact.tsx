@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MapPin, Phone, Mail, Clock, Facebook } from 'lucide-react';
 
@@ -28,7 +27,7 @@ const Contact = () => {
     {
       icon: Clock,
       title: "Horário",
-      info: "Segunda à Sexta: 8h às 18h",
+      info: "Seg-Sex: 07:00-17:30 | Sáb: 07:00-14:00",
       link: "#",
       color: "bg-orange-500"
     }

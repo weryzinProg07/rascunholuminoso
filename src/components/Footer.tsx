@@ -41,7 +41,8 @@ const Footer = () => {
               <p>📱 +244 949 157 934</p>
               <p>✉️ rascunholuminoso@gmail.com</p>
               <p>📍 Humpata / Rua do hospital municipal</p>
-              <p>🕒 Segunda à Sexta: 8h às 18h</p>
+              <p>🕒 Seg-Sex: 07:00-17:30 | Sáb: 07:00-14:00</p>
+              <p>🕒 Dom: Fechado</p>
             </div>
           </div>
         </div>
