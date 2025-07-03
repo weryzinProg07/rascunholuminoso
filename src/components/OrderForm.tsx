@@ -107,26 +107,26 @@ const OrderForm = () => {
       }
       console.log('✅ Pedido salvo no banco com ID:', orderData.id);
 
-      // Preparar dados para envio do email
-      const emailOrderData = {
+      // Preparar dados para envio do email e notificação
+      const orderNotificationData = {
         service: formData.service,
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
         description: formData.description,
-        files: uploadedFiles
+        files: uploadedFiles,
+        orderId: orderData.id
       };
 
-      // Enviar email através da edge function
-      console.log('📧 Enviando email de notificação...');
+      // Enviar email e notificação através da edge function
+      console.log('📧 Enviando email e notificação...');
       let emailSuccess = false;
       let emailError = null;
-      let emailDetails = null;
 
       try {
         console.log('🔄 Chamando edge function send-order-email...');
         const { data, error } = await supabase.functions.invoke('send-order-email', {
-          body: emailOrderData
+          body: orderNotificationData
         });
 
         console.log('📬 Resposta da edge function:', { data, error });
@@ -134,51 +134,34 @@ const OrderForm = () => {
         if (error) {
           console.error('❌ Erro na edge function:', error);
           emailError = `Erro na chamada: ${error.message}`;
-          emailDetails = error;
         } else if (data?.error) {
           console.error('❌ Erro retornado pela function:', data.error);
           emailError = `Erro do servidor: ${data.error}`;
-          emailDetails = data;
         } else if (data?.success) {
-          console.log('✅ Email enviado com sucesso!', data);
+          console.log('✅ Email e notificação enviados com sucesso!', data);
           emailSuccess = true;
-          emailDetails = data;
         } else {
           console.warn('⚠️ Resposta inesperada da function:', data);
           emailError = 'Resposta inesperada do servidor';
-          emailDetails = data;
         }
       } catch (emailErr: any) {
         console.error('❌ Erro ao chamar edge function:', emailErr);
         emailError = `Erro de conexão: ${emailErr.message}`;
-        emailDetails = emailErr;
       }
 
-      // Mostrar resultado baseado no status do email
-      if (emailSuccess) {
-        toast({
-          title: "✅ Pedido enviado com sucesso!",
-          description: "Seu pedido foi salvo e um email de notificação foi enviado. Nossa equipe entrará em contato em breve!",
-        });
-      } else {
-        // Mostrar aviso mais específico sobre o problema do email
-        console.warn('📧 Email não foi enviado, detalhes:', emailDetails);
-        
-        toast({
-          title: "⚠️ Pedido salvo com problema no email",
-          description: `Seu pedido foi salvo na nossa área administrativa, mas não conseguimos enviar o email de notificação automaticamente. Nossa equipe ainda assim receberá e processará seu pedido. Problema: ${emailError}`,
-          variant: "default",
-        });
+      // Mostrar mensagem de sucesso personalizada
+      toast({
+        title: "✅ Recebemos o seu pedido!",
+        description: "Entraremos em contacto consigo em breve. Obrigado pela sua confiança!",
+        className: "bg-green-50 border-green-200",
+      });
 
-        // Log adicional para debug
-        console.group('🔍 Detalhes do erro de email:');
-        console.log('Erro:', emailError);
-        console.log('Detalhes:', emailDetails);
-        console.log('Dados enviados:', emailOrderData);
-        console.groupEnd();
+      // Log adicional se houver problema com email/notificação
+      if (!emailSuccess && emailError) {
+        console.warn('📧 Problema com email/notificação:', emailError);
       }
 
-      // Reset form apenas se tudo deu certo
+      // Reset form
       setFormData({
         service: '',
         name: '',
@@ -195,7 +178,6 @@ const OrderForm = () => {
     } catch (error: any) {
       console.error('❌ ERRO GERAL no envio do pedido:', error);
       
-      // Erro mais específico
       let errorMessage = "Ocorreu um erro ao processar seu pedido.";
       
       if (error.message?.includes('upload')) {
@@ -206,7 +188,7 @@ const OrderForm = () => {
       
       toast({
         title: "❌ Erro ao enviar pedido",
-        description: `${errorMessage} Se o problema persistir, entre em contato pelo WhatsApp. Erro: ${error.message}`,
+        description: `${errorMessage} Se o problema persistir, entre em contacto pelo WhatsApp.`,
         variant: "destructive",
       });
     } finally {

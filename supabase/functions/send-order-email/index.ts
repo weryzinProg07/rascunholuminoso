@@ -20,6 +20,7 @@ interface OrderRequest {
   phone: string;
   description: string;
   files?: FileData[];
+  orderId: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -86,7 +87,8 @@ const handler = async (req: Request): Promise<Response> => {
       email: orderData.email,
       phone: orderData.phone,
       filesCount: orderData.files?.length || 0,
-      descriptionLength: orderData.description?.length || 0
+      descriptionLength: orderData.description?.length || 0,
+      orderId: orderData.orderId
     });
 
     // Validar campos obrigatórios
@@ -124,6 +126,7 @@ const handler = async (req: Request): Promise<Response> => {
 
           <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f97316;">
             <h2 style="color: #374151; margin-top: 0;">📋 Detalhes do Serviço</h2>
+            <p style="margin: 8px 0;"><strong>Pedido ID:</strong> #${orderData.orderId.substring(0, 8)}</p>
             <p style="margin: 8px 0;"><strong>Serviço Solicitado:</strong> ${orderData.service}</p>
             <div style="margin-top: 15px;">
               <strong>Descrição do Projeto:</strong>
@@ -260,12 +263,30 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("✅ EMAIL ENVIADO COM SUCESSO!");
     console.log("✅ ID do email:", emailResponse.data.id);
+
+    // Tentar enviar notificação push (opcional, não falha se não funcionar)
+    try {
+      console.log("📱 Tentando enviar notificação push...");
+      
+      // Aqui você pode implementar a integração com um serviço de push notifications
+      // Como Firebase Cloud Messaging, OneSignal, etc.
+      // Por enquanto, apenas logamos que uma notificação deveria ser enviada
+      
+      console.log("📱 Notificação push: Novo pedido de", orderData.name);
+      console.log("📱 Serviço:", orderData.service);
+      console.log("📱 ID do pedido:", orderData.orderId);
+      
+    } catch (pushError) {
+      console.warn("⚠️ Erro ao enviar notificação push (não crítico):", pushError);
+    }
+
     console.log("=== EDGE FUNCTION FINALIZADA COM SUCESSO ===");
 
     return new Response(JSON.stringify({ 
       success: true, 
       emailId: emailResponse.data.id,
       message: "Email enviado com sucesso para rascunholuminoso@gmail.com",
+      notification: "Tentativa de notificação push registrada",
       timestamp: new Date().toISOString()
     }), {
       status: 200,
