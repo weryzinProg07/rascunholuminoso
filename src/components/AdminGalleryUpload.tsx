@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Upload, ImageIcon } from 'lucide-react';
+import { Upload, ImageIcon, Plus } from 'lucide-react';
 
 const AdminGalleryUpload = () => {
   const [formData, setFormData] = useState({
@@ -140,113 +140,166 @@ const AdminGalleryUpload = () => {
   };
 
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Upload className="text-orange-500" size={24} />
-          <span>Upload para Galeria</span>
-        </CardTitle>
-        <CardDescription>
-          Adicione novas imagens à galeria do site
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Preview da imagem */}
-          {previewUrl && (
-            <div className="border-2 border-dashed border-gray-200 rounded-lg p-4">
-              <div className="text-center">
+    <div className="max-w-4xl mx-auto">
+      <div className="bg-white rounded-lg shadow-sm border p-8">
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center mb-4">
+            <div className="bg-orange-100 p-3 rounded-full">
+              <Upload className="h-6 w-6 text-orange-600" />
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            Upload de Imagem
+          </h2>
+          <p className="text-gray-600">
+            Adicione novas imagens à galeria do site
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Área de Upload */}
+          <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center bg-gray-50">
+            {previewUrl ? (
+              <div className="space-y-4">
                 <img 
                   src={previewUrl} 
                   alt="Preview" 
-                  className="max-h-64 mx-auto rounded-lg object-cover"
+                  className="max-h-64 mx-auto rounded-lg object-cover shadow-md"
                 />
-                <p className="text-sm text-gray-500 mt-2">Preview da imagem selecionada</p>
+                <p className="text-sm text-gray-600">Preview da imagem selecionada</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setPreviewUrl(null);
+                    setSelectedFile(null);
+                    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+                    if (fileInput) fileInput.value = '';
+                  }}
+                  className="mt-2"
+                >
+                  Remover imagem
+                </Button>
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                  <ImageIcon className="h-8 w-8 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-gray-800 mb-2">
+                    Selecione uma imagem
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Arraste e solte ou clique para selecionar
+                  </p>
+                  <Input
+                    id="file-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    required
+                  />
+                  <Label htmlFor="file-upload">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="cursor-pointer"
+                      asChild
+                    >
+                      <span>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Escolher arquivo
+                      </span>
+                    </Button>
+                  </Label>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Formatos aceitos: JPG, PNG, GIF, WebP
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Título */}
+            <div className="space-y-2">
+              <Label htmlFor="title" className="text-sm font-medium text-gray-700">
+                Título *
+              </Label>
+              <Input
+                id="title"
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                placeholder="Digite o título da imagem"
+                className="w-full"
+                required
+              />
             </div>
-          )}
 
-          {/* Upload de arquivo */}
-          <div className="space-y-2">
-            <Label htmlFor="file-upload">Selecionar Imagem *</Label>
-            <Input
-              id="file-upload"
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="cursor-pointer"
-              required
-            />
-            <p className="text-sm text-gray-500">
-              Formatos aceitos: JPG, PNG, GIF, WebP
-            </p>
-          </div>
-
-          {/* Título */}
-          <div className="space-y-2">
-            <Label htmlFor="title">Título *</Label>
-            <Input
-              id="title"
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({...formData, title: e.target.value})}
-              placeholder="Digite o título da imagem"
-              required
-            />
-          </div>
-
-          {/* Categoria */}
-          <div className="space-y-2">
-            <Label htmlFor="category">Categoria</Label>
-            <Select 
-              value={formData.category} 
-              onValueChange={(value) => setFormData({...formData, category: value})}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione uma categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Trabalhos Realizados">Trabalhos Realizados</SelectItem>
-                <SelectItem value="Projetos">Projetos</SelectItem>
-                <SelectItem value="Inspirações">Inspirações</SelectItem>
-                <SelectItem value="Processo">Processo</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Categoria */}
+            <div className="space-y-2">
+              <Label htmlFor="category" className="text-sm font-medium text-gray-700">
+                Categoria
+              </Label>
+              <Select 
+                value={formData.category} 
+                onValueChange={(value) => setFormData({...formData, category: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Trabalhos Realizados">Trabalhos Realizados</SelectItem>
+                  <SelectItem value="Projetos">Projetos</SelectItem>
+                  <SelectItem value="Inspirações">Inspirações</SelectItem>
+                  <SelectItem value="Processo">Processo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Descrição */}
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição (opcional)</Label>
+            <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+              Descrição (opcional)
+            </Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
               placeholder="Adicione uma descrição para a imagem..."
-              rows={3}
+              rows={4}
+              className="w-full"
             />
           </div>
 
           {/* Botão de envio */}
-          <Button 
-            type="submit" 
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-            disabled={uploading}
-          >
-            {uploading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Fazendo upload...
-              </>
-            ) : (
-              <>
-                <ImageIcon className="w-4 h-4 mr-2" />
-                Adicionar à Galeria
-              </>
-            )}
-          </Button>
+          <div className="flex justify-center pt-4">
+            <Button 
+              type="submit" 
+              className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 text-lg"
+              disabled={uploading}
+              size="lg"
+            >
+              {uploading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                  Fazendo upload...
+                </>
+              ) : (
+                <>
+                  <ImageIcon className="w-5 h-5 mr-2" />
+                  Adicionar à Galeria
+                </>
+              )}
+            </Button>
+          </div>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

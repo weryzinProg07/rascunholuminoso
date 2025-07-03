@@ -1,22 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Eye, Clock, CheckCircle, Download, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { ShoppingBag, Mail, Phone, User, Calendar, FileText } from 'lucide-react';
 
 interface Order {
   id: string;
-  service: string;
   name: string;
   email: string;
   phone: string;
+  service: string;
   description: string;
-  files: any[] | null;
   status: string;
+  files: any[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -24,7 +23,10 @@ interface Order {
 const AdminOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   const fetchOrders = async () => {
     try {
@@ -34,11 +36,12 @@ const AdminOrders = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      
       setOrders(data || []);
     } catch (error) {
-      console.error('Erro ao buscar pedidos:', error);
+      console.error('Erro ao carregar pedidos:', error);
       toast({
-        title: "Erro ao carregar pedidos",
+        title: "Erro",
         description: "Não foi possível carregar os pedidos.",
         variant: "destructive",
       });
@@ -51,18 +54,13 @@ const AdminOrders = () => {
     try {
       const { error } = await supabase
         .from('orders')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
+        .update({ status: newStatus })
         .eq('id', orderId);
 
       if (error) throw error;
 
       setOrders(orders.map(order => 
-        order.id === orderId 
-          ? { ...order, status: newStatus, updated_at: new Date().toISOString() }
-          : order
+        order.id === orderId ? { ...order, status: newStatus } : order
       ));
 
       toast({
@@ -72,31 +70,25 @@ const AdminOrders = () => {
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
       toast({
-        title: "Erro ao atualizar status",
+        title: "Erro",
         description: "Não foi possível atualizar o status do pedido.",
         variant: "destructive",
       });
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'novo':
-        return <Badge variant="secondary" className="bg-orange-100 text-orange-800">Novo</Badge>;
-      case 'lido':
-        return <Badge variant="outline" className="border-blue-500 text-blue-700">Lido</Badge>;
-      case 'em_andamento':
-        return <Badge variant="outline" className="border-yellow-500 text-yellow-700">Em Andamento</Badge>;
-      case 'concluido':
-        return <Badge variant="outline" className="border-green-500 text-green-700">Concluído</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
+      case 'novo': return 'bg-blue-100 text-blue-800';
+      case 'em_andamento': return 'bg-yellow-100 text-yellow-800';
+      case 'concluido': return 'bg-green-100 text-green-800';
+      case 'cancelado': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('pt-BR', {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -105,13 +97,9 @@ const AdminOrders = () => {
     });
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12">
+      <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
       </div>
     );
@@ -122,139 +110,123 @@ const AdminOrders = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Pedidos Recebidos</h2>
-          <p className="text-gray-600">Gerencie todos os pedidos feitos através do site</p>
+          <p className="text-gray-600">Gerencie os pedidos dos clientes</p>
         </div>
-        <Button onClick={fetchOrders} variant="outline">
-          Atualizar
-        </Button>
+        <Badge variant="outline" className="text-lg px-3 py-1">
+          {orders.length} pedidos
+        </Badge>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <span>Total de Pedidos: {orders.length}</span>
-          </CardTitle>
-          <CardDescription>
-            Pedidos ordenados do mais recente para o mais antigo
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {orders.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <p className="text-lg">Nenhum pedido encontrado</p>
-              <p className="text-sm">Os pedidos aparecerão aqui quando forem enviados pelo formulário do site</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data/Hora</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Serviço</TableHead>
-                    <TableHead>Contato</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Arquivos</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">
-                        {formatDate(order.created_at)}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{order.name}</p>
-                          <p className="text-sm text-gray-500">{order.email}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>{order.service}</TableCell>
-                      <TableCell>
-                        <a 
-                          href={`https://wa.me/${order.phone.replace(/\D/g, '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-green-600 hover:text-green-800 underline"
-                        >
-                          {order.phone}
-                        </a>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-xs">
-                          <p className="text-sm truncate" title={order.description}>
-                            {order.description}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {order.files && order.files.length > 0 ? (
-                          <div className="space-y-1">
-                            {order.files.map((file: any, index: number) => (
-                              <div key={index} className="flex items-center space-x-2">
-                                <a
-                                  href={file.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center space-x-1"
-                                >
-                                  <ExternalLink className="w-3 h-3" />
-                                  <span className="truncate max-w-20">{file.name}</span>
-                                </a>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">Nenhum</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(order.status)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-1">
-                          {order.status === 'novo' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateOrderStatus(order.id, 'lido')}
-                              className="text-blue-600 hover:text-blue-800"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {order.status === 'lido' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateOrderStatus(order.id, 'em_andamento')}
-                              className="text-yellow-600 hover:text-yellow-800"
-                            >
-                              <Clock className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {order.status === 'em_andamento' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateOrderStatus(order.id, 'concluido')}
-                              className="text-green-600 hover:text-green-800"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {orders.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <ShoppingBag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum pedido encontrado</h3>
+            <p className="text-gray-500">Os pedidos dos clientes aparecerão aqui.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-6">
+          {orders.map((order) => (
+            <Card key={order.id} className="border-l-4 border-l-orange-500">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-orange-100 p-2 rounded-full">
+                      <ShoppingBag className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">{order.service}</CardTitle>
+                      <CardDescription>
+                        Pedido #{order.id.slice(0, 8)}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={getStatusColor(order.status)}>
+                      {order.status.replace('_', ' ')}
+                    </Badge>
+                    <span className="text-sm text-gray-500 flex items-center">
+                      <Calendar className="h-4 w-4 mr-1" />
+                      {formatDate(order.created_at)}
+                    </span>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <User className="h-4 w-4 text-gray-400" />
+                      <span className="font-medium">{order.name}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-600">{order.email}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Phone className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-600">{order.phone}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-start space-x-2">
+                      <FileText className="h-4 w-4 text-gray-400 mt-1" />
+                      <div>
+                        <p className="font-medium text-sm">Descrição:</p>
+                        <p className="text-gray-600 text-sm">{order.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {order.files && order.files.length > 0 && (
+                  <div className="border-t pt-4">
+                    <p className="font-medium text-sm mb-2">Arquivos anexados:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {order.files.map((file: any, index: number) => (
+                        <Badge key={index} variant="outline">
+                          {file.name || `Arquivo ${index + 1}`}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex space-x-2 pt-4 border-t">
+                  <Button
+                    size="sm"
+                    onClick={() => updateOrderStatus(order.id, 'em_andamento')}
+                    disabled={order.status === 'em_andamento'}
+                    className="bg-yellow-500 hover:bg-yellow-600"
+                  >
+                    Em Andamento
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => updateOrderStatus(order.id, 'concluido')}
+                    disabled={order.status === 'concluido'}
+                    className="bg-green-500 hover:bg-green-600"
+                  >
+                    Concluído
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => updateOrderStatus(order.id, 'cancelado')}
+                    disabled={order.status === 'cancelado'}
+                    className="text-red-600 border-red-300 hover:bg-red-50"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
