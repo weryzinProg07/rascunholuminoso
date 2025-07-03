@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { ShoppingBag, Mail, Phone, User, Calendar, FileText } from 'lucide-react';
+import { ShoppingBag, Mail, Phone, User, Calendar, FileText, Download, Trash2 } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -15,7 +15,7 @@ interface Order {
   service: string;
   description: string;
   status: string;
-  files: any[] | null;
+  files: any;
   created_at: string;
   updated_at: string;
 }
@@ -72,6 +72,62 @@ const AdminOrders = () => {
       toast({
         title: "Erro",
         description: "Não foi possível atualizar o status do pedido.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteOrder = async (orderId: string) => {
+    if (!confirm('Tem certeza que deseja apagar este pedido? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      setOrders(orders.filter(order => order.id !== orderId));
+
+      toast({
+        title: "Pedido apagado",
+        description: "O pedido foi removido com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao apagar pedido:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível apagar o pedido.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const downloadFile = async (fileUrl: string, fileName: string) => {
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download iniciado",
+        description: `Fazendo download de ${fileName}`,
+      });
+    } catch (error) {
+      console.error('Erro ao fazer download:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível fazer o download do arquivo.",
         variant: "destructive",
       });
     }
@@ -182,45 +238,73 @@ const AdminOrders = () => {
                   </div>
                 </div>
 
-                {order.files && order.files.length > 0 && (
+                {order.files && Array.isArray(order.files) && order.files.length > 0 && (
                   <div className="border-t pt-4">
                     <p className="font-medium text-sm mb-2">Arquivos anexados:</p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid gap-2">
                       {order.files.map((file: any, index: number) => (
-                        <Badge key={index} variant="outline">
-                          {file.name || `Arquivo ${index + 1}`}
-                        </Badge>
+                        <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm">{file.name || `Arquivo ${index + 1}`}</span>
+                          </div>
+                          {file.url && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => downloadFile(file.url, file.name || `arquivo_${index + 1}`)}
+                              className="flex items-center space-x-1"
+                            >
+                              <Download className="h-3 w-3" />
+                              <span>Download</span>
+                            </Button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                <div className="flex space-x-2 pt-4 border-t">
-                  <Button
-                    size="sm"
-                    onClick={() => updateOrderStatus(order.id, 'em_andamento')}
-                    disabled={order.status === 'em_andamento'}
-                    className="bg-yellow-500 hover:bg-yellow-600"
-                  >
-                    Em Andamento
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => updateOrderStatus(order.id, 'concluido')}
-                    disabled={order.status === 'concluido'}
-                    className="bg-green-500 hover:bg-green-600"
-                  >
-                    Concluído
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => updateOrderStatus(order.id, 'cancelado')}
-                    disabled={order.status === 'cancelado'}
-                    className="text-red-600 border-red-300 hover:bg-red-50"
-                  >
-                    Cancelar
-                  </Button>
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <div className="flex space-x-2">
+                    <Button
+                      size="sm"
+                      onClick={() => updateOrderStatus(order.id, 'em_andamento')}
+                      disabled={order.status === 'em_andamento'}
+                      className="bg-yellow-500 hover:bg-yellow-600"
+                    >
+                      Em Andamento
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => updateOrderStatus(order.id, 'concluido')}
+                      disabled={order.status === 'concluido'}
+                      className="bg-green-500 hover:bg-green-600"
+                    >
+                      Concluído
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => updateOrderStatus(order.id, 'cancelado')}
+                      disabled={order.status === 'cancelado'}
+                      className="text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                  
+                  {order.status === 'concluido' && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => deleteOrder(order.id)}
+                      className="flex items-center space-x-1"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      <span>Apagar</span>
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
