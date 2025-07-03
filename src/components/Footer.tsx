@@ -50,7 +50,7 @@ const Footer = () => {
         <div className="border-t border-gray-700 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="text-sm text-gray-400">
-              © 2024 Rascunho Luminoso. Todos os direitos reservados.
+              © 2025 Rascunho Luminoso. Todos os direitos reservados.
             </div>
             <div className="flex items-center justify-between w-full md:w-auto">
               <div className="flex items-center space-x-2 text-sm text-gray-400">
