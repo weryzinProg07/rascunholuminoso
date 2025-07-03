@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, Send, CheckCircle, AlertCircle, Mail, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -121,43 +121,64 @@ const OrderForm = () => {
       console.log('📧 Enviando email de notificação...');
       let emailSuccess = false;
       let emailError = null;
+      let emailDetails = null;
 
       try {
+        console.log('🔄 Chamando edge function send-order-email...');
         const { data, error } = await supabase.functions.invoke('send-order-email', {
           body: emailOrderData
         });
 
+        console.log('📬 Resposta da edge function:', { data, error });
+
         if (error) {
           console.error('❌ Erro na edge function:', error);
-          emailError = error;
+          emailError = `Erro na chamada: ${error.message}`;
+          emailDetails = error;
         } else if (data?.error) {
           console.error('❌ Erro retornado pela function:', data.error);
-          emailError = data.error;
-        } else {
+          emailError = `Erro do servidor: ${data.error}`;
+          emailDetails = data;
+        } else if (data?.success) {
           console.log('✅ Email enviado com sucesso!', data);
           emailSuccess = true;
+          emailDetails = data;
+        } else {
+          console.warn('⚠️ Resposta inesperada da function:', data);
+          emailError = 'Resposta inesperada do servidor';
+          emailDetails = data;
         }
-      } catch (emailErr) {
+      } catch (emailErr: any) {
         console.error('❌ Erro ao chamar edge function:', emailErr);
-        emailError = emailErr;
+        emailError = `Erro de conexão: ${emailErr.message}`;
+        emailDetails = emailErr;
       }
 
-      // Mostrar resultado final
+      // Mostrar resultado baseado no status do email
       if (emailSuccess) {
         toast({
           title: "✅ Pedido enviado com sucesso!",
-          description: "Seu pedido foi salvo e um email foi enviado para nossa equipe. Entraremos em contato em breve!",
+          description: "Seu pedido foi salvo e um email de notificação foi enviado. Nossa equipe entrará em contato em breve!",
         });
       } else {
+        // Mostrar aviso mais específico sobre o problema do email
+        console.warn('📧 Email não foi enviado, detalhes:', emailDetails);
+        
         toast({
-          title: "⚠️ Pedido salvo com aviso",
-          description: "Seu pedido foi salvo com sucesso, mas houve um problema no envio do email de notificação. Nossa equipe ainda assim receberá seu pedido.",
+          title: "⚠️ Pedido salvo com problema no email",
+          description: `Seu pedido foi salvo na nossa área administrativa, mas não conseguimos enviar o email de notificação automaticamente. Nossa equipe ainda assim receberá e processará seu pedido. Problema: ${emailError}`,
           variant: "default",
         });
-        console.warn('Email não foi enviado, mas pedido foi salvo:', emailError);
+
+        // Log adicional para debug
+        console.group('🔍 Detalhes do erro de email:');
+        console.log('Erro:', emailError);
+        console.log('Detalhes:', emailDetails);
+        console.log('Dados enviados:', emailOrderData);
+        console.groupEnd();
       }
 
-      // Reset form
+      // Reset form apenas se tudo deu certo
       setFormData({
         service: '',
         name: '',
@@ -171,11 +192,21 @@ const OrderForm = () => {
       const fileInput = document.getElementById('files') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ ERRO GERAL no envio do pedido:', error);
+      
+      // Erro mais específico
+      let errorMessage = "Ocorreu um erro ao processar seu pedido.";
+      
+      if (error.message?.includes('upload')) {
+        errorMessage = "Erro no upload dos arquivos. Verifique se os arquivos são válidos.";
+      } else if (error.message?.includes('insert') || error.message?.includes('database')) {
+        errorMessage = "Erro ao salvar o pedido. Tente novamente em alguns instantes.";
+      }
+      
       toast({
         title: "❌ Erro ao enviar pedido",
-        description: "Ocorreu um erro ao processar seu pedido. Tente novamente ou entre em contato pelo WhatsApp.",
+        description: `${errorMessage} Se o problema persistir, entre em contato pelo WhatsApp. Erro: ${error.message}`,
         variant: "destructive",
       });
     } finally {
