@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Upload, Send, CheckCircle } from 'lucide-react';
+import { Upload, Send, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -75,16 +74,20 @@ const OrderForm = () => {
     if (isSubmitting) return;
     
     setIsSubmitting(true);
+    console.log('=== INICIANDO ENVIO DE PEDIDO ===');
 
     try {
       let uploadedFiles = [];
       
       // Upload files se existirem
       if (formData.files && formData.files.length > 0) {
+        console.log('📎 Fazendo upload de arquivos...');
         uploadedFiles = await uploadFiles(formData.files);
+        console.log('✅ Upload concluído:', uploadedFiles.length, 'arquivos');
       }
 
       // Salvar pedido no banco de dados
+      console.log('💾 Salvando pedido no banco...');
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -99,8 +102,10 @@ const OrderForm = () => {
         .single();
 
       if (orderError) {
+        console.error('❌ Erro ao salvar no banco:', orderError);
         throw orderError;
       }
+      console.log('✅ Pedido salvo no banco com ID:', orderData.id);
 
       // Preparar dados para envio do email
       const emailOrderData = {
@@ -113,24 +118,44 @@ const OrderForm = () => {
       };
 
       // Enviar email através da edge function
+      console.log('📧 Enviando email de notificação...');
+      let emailSuccess = false;
+      let emailError = null;
+
       try {
         const { data, error } = await supabase.functions.invoke('send-order-email', {
           body: emailOrderData
         });
 
         if (error) {
-          console.error('Erro ao enviar email:', error);
-          // Não falhar o processo se o email não for enviado
+          console.error('❌ Erro na edge function:', error);
+          emailError = error;
+        } else if (data?.error) {
+          console.error('❌ Erro retornado pela function:', data.error);
+          emailError = data.error;
+        } else {
+          console.log('✅ Email enviado com sucesso!', data);
+          emailSuccess = true;
         }
-      } catch (emailError) {
-        console.error('Erro ao enviar email:', emailError);
-        // Não falhar o processo se o email não for enviado
+      } catch (emailErr) {
+        console.error('❌ Erro ao chamar edge function:', emailErr);
+        emailError = emailErr;
       }
 
-      toast({
-        title: "Pedido enviado com sucesso!",
-        description: "Recebemos seu pedido e entraremos em contato em breve via WhatsApp.",
-      });
+      // Mostrar resultado final
+      if (emailSuccess) {
+        toast({
+          title: "✅ Pedido enviado com sucesso!",
+          description: "Seu pedido foi salvo e um email foi enviado para nossa equipe. Entraremos em contato em breve!",
+        });
+      } else {
+        toast({
+          title: "⚠️ Pedido salvo com aviso",
+          description: "Seu pedido foi salvo com sucesso, mas houve um problema no envio do email de notificação. Nossa equipe ainda assim receberá seu pedido.",
+          variant: "default",
+        });
+        console.warn('Email não foi enviado, mas pedido foi salvo:', emailError);
+      }
 
       // Reset form
       setFormData({
@@ -147,14 +172,15 @@ const OrderForm = () => {
       if (fileInput) fileInput.value = '';
 
     } catch (error) {
-      console.error('Erro ao enviar pedido:', error);
+      console.error('❌ ERRO GERAL no envio do pedido:', error);
       toast({
-        title: "Erro ao enviar pedido",
-        description: "Ocorreu um erro. Tente novamente ou entre em contato pelo WhatsApp.",
+        title: "❌ Erro ao enviar pedido",
+        description: "Ocorreu um erro ao processar seu pedido. Tente novamente ou entre em contato pelo WhatsApp.",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
+      console.log('=== PROCESSO FINALIZADO ===');
     }
   };
 
