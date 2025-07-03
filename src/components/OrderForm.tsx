@@ -84,8 +84,26 @@ const OrderForm = () => {
         uploadedFiles = await uploadFiles(formData.files);
       }
 
-      // Preparar dados para envio
-      const orderData = {
+      // Salvar pedido no banco de dados
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          service: formData.service,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          description: formData.description,
+          files: uploadedFiles.length > 0 ? uploadedFiles : null
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        throw orderError;
+      }
+
+      // Preparar dados para envio do email
+      const emailOrderData = {
         service: formData.service,
         name: formData.name,
         email: formData.email,
@@ -95,12 +113,18 @@ const OrderForm = () => {
       };
 
       // Enviar email através da edge function
-      const { data, error } = await supabase.functions.invoke('send-order-email', {
-        body: orderData
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke('send-order-email', {
+          body: emailOrderData
+        });
 
-      if (error) {
-        throw error;
+        if (error) {
+          console.error('Erro ao enviar email:', error);
+          // Não falhar o processo se o email não for enviado
+        }
+      } catch (emailError) {
+        console.error('Erro ao enviar email:', emailError);
+        // Não falhar o processo se o email não for enviado
       }
 
       toast({

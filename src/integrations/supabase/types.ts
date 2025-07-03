@@ -39,6 +39,45 @@ export type Database = {
         }
         Relationships: []
       }
+      orders: {
+        Row: {
+          created_at: string
+          description: string
+          email: string
+          files: Json | null
+          id: string
+          name: string
+          phone: string
+          service: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          email: string
+          files?: Json | null
+          id?: string
+          name: string
+          phone: string
+          service: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          email?: string
+          files?: Json | null
+          id?: string
+          name?: string
+          phone?: string
+          service?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
