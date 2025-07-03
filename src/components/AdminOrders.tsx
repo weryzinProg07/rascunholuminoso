@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -83,18 +82,26 @@ const AdminOrders = () => {
     }
 
     try {
+      console.log('Tentando apagar pedido:', orderId);
+      
       const { error } = await supabase
         .from('orders')
         .delete()
         .eq('id', orderId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro do Supabase:', error);
+        throw error;
+      }
 
-      setOrders(orders.filter(order => order.id !== orderId));
+      console.log('Pedido apagado com sucesso');
+      
+      // Atualizar a lista local removendo o pedido apagado
+      setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
 
       toast({
         title: "Pedido apagado",
-        description: "O pedido foi removido com sucesso.",
+        description: "O pedido foi removido permanentemente.",
       });
     } catch (error) {
       console.error('Erro ao apagar pedido:', error);
@@ -109,6 +116,10 @@ const AdminOrders = () => {
   const downloadFile = async (fileUrl: string, fileName: string) => {
     try {
       const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error('Falha ao baixar o arquivo');
+      }
+      
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
