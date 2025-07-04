@@ -1,20 +1,54 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bell, BellOff } from 'lucide-react';
+import { Bell, BellOff, Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { useFCM } from '@/hooks/useFCM';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const NotificationManager = () => {
-  const { fcmToken, isSupported, requestPermission } = useFCM();
+  const { 
+    fcmToken, 
+    isSupported, 
+    isLoading, 
+    permissionStatus, 
+    requestPermission, 
+    disableNotifications 
+  } = useFCM();
 
-  useEffect(() => {
-    // Verificar se já temos um token salvo
-    const savedToken = localStorage.getItem('fcm-token');
-    if (savedToken) {
-      console.log('Token FCM já existe:', savedToken);
+  const getStatusInfo = () => {
+    if (!isSupported) {
+      return {
+        icon: <XCircle className="h-5 w-5 text-red-500" />,
+        status: 'Não Suportado',
+        color: 'text-red-500'
+      };
     }
-  }, []);
+
+    if (fcmToken) {
+      return {
+        icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+        status: 'Ativas',
+        color: 'text-green-500'
+      };
+    }
+
+    if (permissionStatus === 'denied') {
+      return {
+        icon: <XCircle className="h-5 w-5 text-red-500" />,
+        status: 'Bloqueadas',
+        color: 'text-red-500'
+      };
+    }
+
+    return {
+      icon: <AlertCircle className="h-5 w-5 text-yellow-500" />,
+      status: 'Desativadas',
+      color: 'text-yellow-500'
+    };
+  };
+
+  const statusInfo = getStatusInfo();
 
   if (!isSupported) {
     return (
@@ -28,6 +62,14 @@ const NotificationManager = () => {
             Seu navegador não suporta notificações push ou service workers.
           </CardDescription>
         </CardHeader>
+        <CardContent>
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Para receber notificações, use um navegador moderno como Chrome, Firefox ou Safari.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
       </Card>
     );
   }
@@ -40,36 +82,103 @@ const NotificationManager = () => {
           <span>Notificações Push</span>
         </CardTitle>
         <CardDescription>
-          Receba notificações instantâneas quando novos pedidos chegarem.
+          Receba notificações instantâneas quando novos pedidos chegarem, mesmo com o navegador fechado.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div>
-            <p className="text-sm text-gray-600 mb-2">
-              Status: {fcmToken ? '✅ Ativadas' : '⚠️ Desativadas'}
+      <CardContent className="space-y-4">
+        {/* Status das Notificações */}
+        <div className="flex items-center space-x-2">
+          {statusInfo.icon}
+          <span className={`font-medium ${statusInfo.color}`}>
+            Status: {statusInfo.status}
+          </span>
+        </div>
+
+        {/* Informações do Token */}
+        {fcmToken && (
+          <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+            <p className="text-sm text-green-700 font-medium">
+              ✅ Notificações configuradas com sucesso!
             </p>
-            {fcmToken && (
-              <p className="text-xs text-gray-500">
-                Token: {fcmToken.substring(0, 20)}...
-              </p>
-            )}
+            <p className="text-xs text-green-600 mt-1 font-mono break-all">
+              Token: {fcmToken.substring(0, 30)}...
+            </p>
           </div>
-          
+        )}
+
+        {/* Aviso de Permissão Negada */}
+        {permissionStatus === 'denied' && (
+          <Alert>
+            <XCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Permissão negada!</strong> Para ativar as notificações:
+              <br />
+              1. Clique no ícone de cadeado na barra de endereços
+              <br />
+              2. Permita notificações para este site
+              <br />
+              3. Recarregue a página e tente novamente
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Botões de Controle */}
+        <div className="flex gap-2">
+          {!fcmToken ? (
+            <Button 
+              onClick={requestPermission}
+              disabled={isLoading || permissionStatus === 'denied'}
+              className="flex-1"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Ativando...
+                </>
+              ) : (
+                <>
+                  <Bell className="w-4 h-4 mr-2" />
+                  Ativar Notificações
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button 
+              onClick={disableNotifications}
+              variant="outline"
+              className="flex-1"
+            >
+              <BellOff className="w-4 h-4 mr-2" />
+              Desativar Notificações
+            </Button>
+          )}
+        </div>
+
+        {/* Instruções */}
+        <div className="text-xs text-gray-500 space-y-1 p-3 bg-gray-50 rounded-lg">
+          <p className="font-medium text-gray-700">📋 Como funciona:</p>
+          <p>• Clique em "Ativar Notificações" e permita quando solicitado</p>
+          <p>• Receberá notificações mesmo com o navegador fechado</p>
+          <p>• Pode desativar a qualquer momento</p>
+          <p>• As notificações chegam apenas no dispositivo onde foi ativado</p>
+        </div>
+
+        {/* Teste de Notificação */}
+        {fcmToken && (
           <Button 
-            onClick={requestPermission}
-            disabled={!!fcmToken}
+            onClick={() => {
+              new Notification('Teste - Rascunho Luminoso', {
+                body: 'Esta é uma notificação de teste!',
+                icon: '/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png'
+              });
+            }}
+            variant="secondary"
+            size="sm"
             className="w-full"
           >
-            {fcmToken ? 'Notificações Ativas' : 'Ativar Notificações'}
+            🧪 Enviar Notificação de Teste
           </Button>
-          
-          <div className="text-xs text-gray-500 space-y-1">
-            <p>• Certifique-se de permitir notificações quando solicitado</p>
-            <p>• As notificações funcionam mesmo com o navegador fechado</p>
-            <p>• Você pode desativar a qualquer momento nas configurações do navegador</p>
-          </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
