@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      fcm_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          token: string
+          updated_at: string
+          user_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          token: string
+          updated_at?: string
+          user_type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          token?: string
+          updated_at?: string
+          user_type?: string
+        }
+        Relationships: []
+      }
       gallery_uploads: {
         Row: {
           category: string | null
