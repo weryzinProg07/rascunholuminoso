@@ -3,14 +3,14 @@
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
 
-// IMPORTANTE: Use a mesma configuração do arquivo firebase.ts
+// Configuração do Firebase - mesma do arquivo firebase.ts
 const firebaseConfig = {
-  apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", // Sua API Key real
-  authDomain: "seu-projeto.firebaseapp.com", // Seu domínio
-  projectId: "seu-projeto-id", // Seu Project ID
-  storageBucket: "seu-projeto.appspot.com", // Seu Storage Bucket
-  messagingSenderId: "123456789012", // Seu Sender ID
-  appId: "1:123456789012:web:abcdefghijklmnop" // Seu App ID
+  apiKey: "AIzaSyDGqK8v7pHWkOleLr190syJKEGCJhXwc",
+  authDomain: "rascunho-luminoso.firebaseapp.com",
+  projectId: "rascunho-luminoso",
+  storageBucket: "rascunho-luminoso.appspot.com",
+  messagingSenderId: "123456789012",
+  appId: "1:123456789012:web:abcdefghijklmnop"
 };
 
 // Inicializar Firebase no service worker

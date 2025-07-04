@@ -33,7 +33,7 @@ export const useFCM = () => {
 
       // Configurar listener para mensagens em primeiro plano
       const unsubscribe = onForegroundMessage((payload) => {
-        console.log('📱 Notificação recebida:', payload);
+        console.log('📱 Notificação recebida em primeiro plano:', payload);
         
         toast({
           title: payload.notification?.title || 'Nova Notificação',

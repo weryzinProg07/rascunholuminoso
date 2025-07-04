@@ -2,14 +2,14 @@
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
-// IMPORTANTE: Substitua por sua configuração real do Firebase
+// Configuração do Firebase - substitua pelos seus valores reais
 const firebaseConfig = {
-  apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", // Sua API Key real
-  authDomain: "seu-projeto.firebaseapp.com", // Seu domínio
-  projectId: "seu-projeto-id", // Seu Project ID
-  storageBucket: "seu-projeto.appspot.com", // Seu Storage Bucket
-  messagingSenderId: "123456789012", // Seu Sender ID
-  appId: "1:123456789012:web:abcdefghijklmnop" // Seu App ID
+  apiKey: "AIzaSyDGqK8v7pHWkOleLr190syJKEGCJhXwc",
+  authDomain: "rascunho-luminoso.firebaseapp.com",
+  projectId: "rascunho-luminoso",
+  storageBucket: "rascunho-luminoso.appspot.com",
+  messagingSenderId: "123456789012",
+  appId: "1:123456789012:web:abcdefghijklmnop"
 };
 
 // Inicializar Firebase
@@ -48,7 +48,7 @@ export const requestFCMToken = async () => {
     
     if (permission === 'granted') {
       const token = await getToken(messaging, {
-        vapidKey: 'BNOxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' // Substitua pela sua VAPID Key
+        vapidKey: 'Z8JPXbqK-VKEfwLu8v7pHWkOleLr190syJKEGCJhXwc'
       });
       
       if (token) {

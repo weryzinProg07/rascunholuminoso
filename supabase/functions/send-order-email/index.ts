@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 
@@ -263,33 +264,36 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("✅ EMAIL ENVIADO COM SUCESSO!");
     console.log("✅ ID do email:", emailResponse.data.id);
 
-    // Tentar enviar notificação push (após o email ser enviado com sucesso)
+    // Enviar notificação push para admin
     try {
-      console.log("📱 Tentando enviar notificação push...");
+      console.log("📱 Enviando notificação push para admin...");
       
       const firebaseServerKey = Deno.env.get("FIREBASE_SERVER_KEY");
       if (!firebaseServerKey) {
         console.warn("⚠️ FIREBASE_SERVER_KEY não encontrada, pulando notificação push");
       } else {
-        // Token FCM do admin (você pode salvá-lo no banco ou usar um fixo)
-        // Por enquanto, vamos tentar enviar para um tópico
+        // Payload da notificação FCM
         const fcmPayload = {
-          to: "/topics/admin-notifications", // Usar tópicos para simplificar
+          to: "/topics/admin-notifications",
           notification: {
             title: "🎨 Novo Pedido - Rascunho Luminoso",
             body: `${orderData.service} solicitado por ${orderData.name}`,
             icon: "/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png",
             badge: "/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png",
             tag: "new-order",
-            requireInteraction: true
+            requireInteraction: true,
+            click_action: "/admin"
           },
           data: {
             orderId: orderData.orderId,
             service: orderData.service,
             customerName: orderData.name,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            url: "/admin"
           }
         };
+
+        console.log("📱 Enviando FCM com payload:", JSON.stringify(fcmPayload, null, 2));
 
         const fcmResponse = await fetch("https://fcm.googleapis.com/fcm/send", {
           method: "POST",
