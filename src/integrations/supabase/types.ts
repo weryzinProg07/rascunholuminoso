@@ -110,7 +110,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      upsert_fcm_token: {
+        Args: { p_token: string; p_user_type?: string; p_is_active?: boolean }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

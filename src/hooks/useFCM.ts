@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { requestFCMToken, onForegroundMessage } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
@@ -55,7 +56,7 @@ export const useFCM = () => {
     try {
       console.log('💾 Salvando token no backend:', token);
       
-      // Usar uma query SQL direta para inserir o token
+      // Usar a função RPC para inserir/atualizar o token
       const { error } = await supabase.rpc('upsert_fcm_token', {
         p_token: token,
         p_user_type: 'admin',
@@ -64,23 +65,6 @@ export const useFCM = () => {
 
       if (error) {
         console.error('❌ Erro ao salvar token no backend:', error);
-        
-        // Tentar método alternativo com inserção direta
-        const { error: insertError } = await supabase
-          .from('fcm_tokens')
-          .insert({ 
-            token: token,
-            user_type: 'admin',
-            is_active: true
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error('❌ Erro alternativo ao salvar token:', insertError);
-        } else {
-          console.log('✅ Token salvo no backend com método alternativo');
-        }
       } else {
         console.log('✅ Token salvo no backend com sucesso');
       }
