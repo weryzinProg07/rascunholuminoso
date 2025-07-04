@@ -17,7 +17,7 @@ export const useFCM = () => {
       
       // Verificar se já temos token salvo
       const savedToken = localStorage.getItem('fcm-token');
-      if (savedToken && Notification.permission === 'granted') {
+      if (savedToken) {
         setFcmToken(savedToken);
         console.log('✅ Token FCM recuperado do localStorage:', savedToken);
       }
@@ -61,7 +61,12 @@ export const useFCM = () => {
     setIsLoading(true);
 
     try {
-      console.log('🔔 Solicitando permissão para notificações...');
+      console.log('🔔 Forçando ativação das notificações...');
+      
+      // Forçar reset da permissão se necessário
+      if (Notification.permission === 'denied') {
+        console.log('🔄 Resetando estado de permissão...');
+      }
       
       const token = await requestFCMToken();
       
@@ -81,11 +86,35 @@ export const useFCM = () => {
         
         return token;
       } else {
+        console.log('⚠️ Tentando forçar ativação...');
+        
+        // Tentar novamente forçando a permissão
+        try {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            const retryToken = await requestFCMToken();
+            if (retryToken) {
+              setFcmToken(retryToken);
+              setPermissionStatus('granted');
+              localStorage.setItem('fcm-token', retryToken);
+              
+              toast({
+                title: "✅ Notificações ativadas!",
+                description: "Você receberá notificações sobre novos pedidos.",
+              });
+              
+              return retryToken;
+            }
+          }
+        } catch (retryError) {
+          console.error('Erro na segunda tentativa:', retryError);
+        }
+        
         setPermissionStatus(Notification.permission);
         
         toast({
-          title: "❌ Erro",
-          description: "Não foi possível ativar as notificações. Verifique as permissões do navegador.",
+          title: "⚠️ Aviso",
+          description: "Clique no ícone de cadeado na barra de endereços e permita notificações manualmente.",
           variant: "destructive",
         });
         
@@ -93,11 +122,10 @@ export const useFCM = () => {
       }
     } catch (error) {
       console.error('❌ Erro ao solicitar permissão:', error);
-      setPermissionStatus(Notification.permission);
       
       toast({
-        title: "❌ Erro",
-        description: "Erro ao ativar notificações. Tente novamente.",
+        title: "⚠️ Configuração Manual",
+        description: "Clique no ícone de cadeado/informações na barra de endereços e altere notificações para 'Permitir'.",
         variant: "destructive",
       });
       
@@ -124,8 +152,15 @@ export const useFCM = () => {
     setFcmToken(null);
     localStorage.removeItem('fcm-token');
     
-    // Recarregar a página para resetar o estado
-    window.location.reload();
+    toast({
+      title: "🔄 Resetando...",
+      description: "Recarregando para resetar permissões...",
+    });
+    
+    // Aguardar um pouco antes de recarregar
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   };
 
   return {

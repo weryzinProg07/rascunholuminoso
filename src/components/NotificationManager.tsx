@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bell, BellOff, Loader2, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Bell, BellOff, Loader2, CheckCircle, XCircle, AlertCircle, RefreshCw, Settings } from 'lucide-react';
 import { useFCM } from '@/hooks/useFCM';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -31,14 +31,6 @@ const NotificationManager = () => {
         icon: <CheckCircle className="h-5 w-5 text-green-500" />,
         status: 'Ativas',
         color: 'text-green-500'
-      };
-    }
-
-    if (permissionStatus === 'denied') {
-      return {
-        icon: <XCircle className="h-5 w-5 text-red-500" />,
-        status: 'Bloqueadas',
-        color: 'text-red-500'
       };
     }
 
@@ -107,24 +99,21 @@ const NotificationManager = () => {
           </div>
         )}
 
-        {/* Aviso de Permissão Negada com Solução */}
-        {permissionStatus === 'denied' && (
+        {/* Instruções para Ativar */}
+        {!fcmToken && (
           <Alert>
-            <XCircle className="h-4 w-4" />
+            <Settings className="h-4 w-4" />
             <AlertDescription>
-              <strong>🔒 Permissão bloqueada!</strong> Como administrador, você pode resolver isso:
+              <strong>🔧 Como ativar as notificações:</strong>
               <br />
               <br />
-              <strong>Método 1 - Resetar permissões do navegador:</strong>
+              <strong>1. Clique em "Ativar Notificações" abaixo</strong>
               <br />
-              1. Clique no ícone de cadeado/informações na barra de endereços
+              <strong>2. Se não funcionar, clique no ícone de cadeado 🔒 na barra de endereços</strong>
               <br />
-              2. Encontre "Notificações" e altere para "Permitir"
+              <strong>3. Altere "Notificações" para "Permitir"</strong>
               <br />
-              3. Recarregue a página
-              <br />
-              <br />
-              <strong>Método 2 - Usar o botão de reset abaixo</strong>
+              <strong>4. Recarregue a página e tente novamente</strong>
             </AlertDescription>
           </Alert>
         )}
@@ -137,6 +126,7 @@ const NotificationManager = () => {
                 onClick={requestPermission}
                 disabled={isLoading}
                 className="flex-1 min-w-[200px]"
+                size="lg"
               >
                 {isLoading ? (
                   <>
@@ -151,22 +141,22 @@ const NotificationManager = () => {
                 )}
               </Button>
               
-              {permissionStatus === 'denied' && (
-                <Button 
-                  onClick={resetPermissions}
-                  variant="secondary"
-                  className="flex-1 min-w-[200px]"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Resetar Permissões
-                </Button>
-              )}
+              <Button 
+                onClick={resetPermissions}
+                variant="secondary"
+                className="flex-1 min-w-[200px]"
+                size="lg"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Resetar e Recarregar
+              </Button>
             </>
           ) : (
             <Button 
               onClick={disableNotifications}
               variant="outline"
               className="flex-1"
+              size="lg"
             >
               <BellOff className="w-4 h-4 mr-2" />
               Desativar Notificações
@@ -174,24 +164,29 @@ const NotificationManager = () => {
           )}
         </div>
 
-        {/* Instruções para Administrador */}
+        {/* Instruções Detalhadas */}
         <div className="text-xs text-gray-500 space-y-1 p-3 bg-gray-50 rounded-lg">
-          <p className="font-medium text-gray-700">👨‍💼 Instruções para Administrador:</p>
-          <p>• Clique em "Ativar Notificações" e permita quando solicitado</p>
-          <p>• Se aparecer "bloqueado", use o botão "Resetar Permissões"</p>
+          <p className="font-medium text-gray-700">👨‍💼 Instruções Detalhadas:</p>
+          <p>• Primeiro, clique no botão "Ativar Notificações"</p>
+          <p>• Se aparecer uma mensagem de permissão, clique em "Permitir"</p>
+          <p>• Se não funcionar, procure o ícone de cadeado 🔒 na barra de endereços</p>
+          <p>• Clique no cadeado e altere "Notificações" para "Permitir"</p>
+          <p>• Use o botão "Resetar e Recarregar" se necessário</p>
           <p>• Receberá notificações mesmo com o navegador fechado</p>
-          <p>• Pode desativar/reativar a qualquer momento</p>
-          <p>• As notificações são apenas para este dispositivo/navegador</p>
         </div>
 
         {/* Teste de Notificação */}
         {fcmToken && (
           <Button 
             onClick={() => {
-              new Notification('🧪 Teste - Rascunho Luminoso', {
-                body: 'Esta é uma notificação de teste! Se você vê isso, as notificações estão funcionando.',
-                icon: '/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png'
-              });
+              if (Notification.permission === 'granted') {
+                new Notification('🧪 Teste - Rascunho Luminoso', {
+                  body: 'Esta é uma notificação de teste! Se você vê isso, as notificações estão funcionando.',
+                  icon: '/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png',
+                  tag: 'test-notification',
+                  requireInteraction: true
+                });
+              }
             }}
             variant="secondary"
             size="sm"
