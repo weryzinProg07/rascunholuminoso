@@ -119,6 +119,15 @@ export const useFCM = () => {
     console.log('🔕 Notificações desativadas pelo usuário');
   };
 
+  const resetPermissions = async () => {
+    // Limpar dados locais
+    setFcmToken(null);
+    localStorage.removeItem('fcm-token');
+    
+    // Recarregar a página para resetar o estado
+    window.location.reload();
+  };
+
   return {
     fcmToken,
     isSupported,
@@ -126,5 +135,6 @@ export const useFCM = () => {
     permissionStatus,
     requestPermission,
     disableNotifications,
+    resetPermissions,
   };
 };
