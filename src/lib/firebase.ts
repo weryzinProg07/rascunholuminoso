@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
@@ -27,7 +26,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Chave VAPID pública para notificações push
-const VAPID_KEY = 'BLc4xRzdM8k9VXEfwLu8v7pHWkOleLr190syJKEGCJhXwc-2A3fHq5K_example_vapid_key_here';
+const VAPID_KEY = 'Z8JPXbqK-VKEfwLu8v7pHWkOleLr190syJKEGCJhXwc';
 
 // Função para solicitar permissão e obter token FCM
 export const requestFCMToken = async () => {
