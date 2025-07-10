@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 
@@ -104,59 +103,10 @@ const registerServiceWorker = async () => {
   }
 };
 
-// Função para solicitar permissão de notificações ANTES de tudo
-const requestNotificationPermission = async (): Promise<NotificationPermission> => {
-  console.log('🔔 === SOLICITANDO PERMISSÃO DE NOTIFICAÇÕES ===');
-  
-  // Verificar status atual
-  let currentPermission = Notification.permission;
-  console.log('📋 Permissão atual:', currentPermission);
-
-  // Se já foi negada, não solicitar novamente
-  if (currentPermission === 'denied') {
-    console.error('❌ Permissão foi negada anteriormente');
-    throw new Error('Permissão para notificações foi negada. Vá nas configurações do navegador (ícone de cadeado/notificação) e permita notificações para este site.');
-  }
-
-  // Se já foi concedida, retornar
-  if (currentPermission === 'granted') {
-    console.log('✅ Permissão já concedida anteriormente');
-    return currentPermission;
-  }
-
-  // Solicitar permissão se ainda não foi definida
-  if (currentPermission === 'default') {
-    console.log('❓ Solicitando permissão ao usuário...');
-    console.log('❓ Uma janela de permissão deve aparecer agora');
-    
-    try {
-      currentPermission = await Notification.requestPermission();
-      console.log('📋 Resposta do usuário:', currentPermission);
-    } catch (error) {
-      console.error('❌ Erro ao solicitar permissão:', error);
-      throw new Error('Erro ao solicitar permissão de notificações');
-    }
-  }
-
-  // Verificar resultado final
-  if (currentPermission === 'denied') {
-    console.error('❌ Usuário negou a permissão');
-    throw new Error('Permissão para notificações foi negada pelo usuário. Para ativar: vá nas configurações do navegador > Privacidade e segurança > Permissões do site > Notificações e permita para este site.');
-  }
-
-  if (currentPermission !== 'granted') {
-    console.error('❌ Permissão não foi concedida. Status:', currentPermission);
-    throw new Error('Permissão para notificações não foi concedida');
-  }
-
-  console.log('✅ === PERMISSÃO CONCEDIDA COM SUCESSO ===');
-  return currentPermission;
-};
-
-// Função principal para obter token FCM (APENAS APÓS PERMISSÃO)
+// Função principal para obter token FCM (CHAMADA APENAS APÓS PERMISSÃO CONCEDIDA)
 export const requestFCMToken = async () => {
   try {
-    console.log('🚀 === INICIANDO PROCESSO FCM COMPLETO ===');
+    console.log('🚀 === OBTENDO TOKEN FCM (PERMISSÃO JÁ CONCEDIDA) ===');
     
     // 1. Verificar suporte do ambiente
     if (!checkEnvironmentSupport()) {
@@ -170,21 +120,21 @@ export const requestFCMToken = async () => {
     }
     console.log('✅ Firebase Messaging suportado');
 
-    // 3. PRIMEIRO: Solicitar permissão (OBRIGATÓRIO)
-    const permission = await requestNotificationPermission();
-    if (permission !== 'granted') {
-      throw new Error('Permissão de notificações é obrigatória para continuar');
+    // 3. Verificar se permissão já foi concedida (OBRIGATÓRIO)
+    if (Notification.permission !== 'granted') {
+      throw new Error('Esta função só deve ser chamada APÓS a permissão ser concedida');
     }
+    console.log('✅ Permissão já concedida anteriormente');
 
-    // 4. Registrar Service Worker (após permissão)
+    // 4. Registrar Service Worker
     const registration = await registerServiceWorker();
 
-    // 5. Inicializar messaging (após permissão e SW)
+    // 5. Inicializar messaging
     messaging = getMessaging(app);
     console.log('✅ Firebase Messaging inicializado');
 
-    // 6. AGORA SIM: Obter token FCM (com permissão garantida)
-    console.log('🎫 === OBTENDO TOKEN FCM (PERMISSÃO GARANTIDA) ===');
+    // 6. Obter token FCM
+    console.log('🎫 === OBTENDO TOKEN FCM ===');
     console.log('🔑 Usando VAPID Key:', VAPID_KEY.substring(0, 30) + '...');
     
     const token = await getToken(messaging, {
@@ -193,18 +143,17 @@ export const requestFCMToken = async () => {
     });
 
     if (!token) {
-      throw new Error('Token FCM não foi gerado mesmo com permissão concedida. Verifique a configuração do Firebase.');
+      throw new Error('Token FCM não foi gerado. Verifique a configuração do Firebase.');
     }
 
     console.log('🎉 === TOKEN FCM OBTIDO COM SUCESSO ===');
     console.log('🎫 Token (primeiros 50 chars):', token.substring(0, 50) + '...');
     console.log('📏 Tamanho do token:', token.length, 'caracteres');
-    console.log('✅ === PROCESSO FCM FINALIZADO COM SUCESSO ===');
     
     return token;
 
   } catch (error: any) {
-    console.error('❌ === ERRO NO PROCESSO FCM ===');
+    console.error('❌ === ERRO AO OBTER TOKEN FCM ===');
     console.error('❌ Tipo do erro:', error.constructor.name);
     console.error('❌ Mensagem:', error.message);
     console.error('❌ Código (se houver):', error.code);
@@ -214,15 +163,13 @@ export const requestFCMToken = async () => {
     let userMessage = error.message;
     
     if (error.code === 'messaging/permission-blocked' || error.message.includes('negada')) {
-      userMessage = 'Notificações foram bloqueadas. Clique no ícone de cadeado ou sino na barra de endereços e permita notificações, ou vá em Configurações do navegador.';
+      userMessage = 'Notificações foram bloqueadas. Clique no ícone de cadeado ou sino na barra de endereços e permita notificações.';
     } else if (error.code === 'messaging/vapid-key-required') {
       userMessage = 'Chave VAPID é obrigatória para notificações.';
     } else if (error.code === 'messaging/registration-token-not-registered') {
       userMessage = 'Token de registro inválido. Recarregue a página e tente novamente.';
     } else if (error.message.includes('HTTPS')) {
       userMessage = 'Notificações só funcionam em HTTPS. Certifique-se de que está acessando via HTTPS.';
-    } else if (error.message.includes('denied')) {
-      userMessage = 'Permissão negada. Para resolver: Configurações do navegador > Privacidade > Notificações > Permitir para este site.';
     }
     
     throw new Error(userMessage);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { requestFCMToken, onForegroundMessage, testLocalNotification } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
@@ -107,7 +106,10 @@ export const useFCM = () => {
     setIsLoading(true);
 
     try {
-      console.log('🚀 === INICIANDO ATIVAÇÃO DE NOTIFICAÇÕES ===');
+      console.log('🚀 === INICIANDO PROCESSO COMPLETO DE ATIVAÇÃO ===');
+      
+      // PASSO 1: Primeiro solicitar permissão explicitamente
+      console.log('🔔 Solicitando permissão de notificações...');
       
       toast({
         title: "🔔 Solicitando permissão...",
@@ -115,22 +117,30 @@ export const useFCM = () => {
         duration: 5000,
       });
 
-      // A função requestFCMToken agora faz TUDO na ordem correta:
-      // 1. Solicita permissão PRIMEIRO
-      // 2. Só depois tenta obter o token
+      const permission = await Notification.requestPermission();
+      console.log('📋 Resposta da permissão:', permission);
+      
+      setPermissionStatus(permission);
+
+      if (permission !== 'granted') {
+        throw new Error('Permissão de notificações foi negada pelo usuário');
+      }
+
+      console.log('✅ Permissão concedida! Prosseguindo para obter token...');
+
+      // PASSO 2: Agora que temos permissão, obter o token FCM
       const token = await requestFCMToken();
       
       if (token) {
         console.log('✅ Token obtido:', token.substring(0, 20) + '...');
         
         setFcmToken(token);
-        setPermissionStatus('granted');
         
         // Salvar localmente e no backend
         localStorage.setItem('fcm-admin-token', token);
         await saveAdminToken(token);
         
-        console.log('✅ === NOTIFICAÇÕES ATIVADAS COM SUCESSO ===');
+        console.log('✅ === PROCESSO COMPLETO FINALIZADO COM SUCESSO ===');
         
         toast({
           title: "✅ Notificações ativadas!",
@@ -144,7 +154,7 @@ export const useFCM = () => {
       }
       
     } catch (error: any) {
-      console.error('❌ === ERRO NA ATIVAÇÃO ===');
+      console.error('❌ === ERRO NO PROCESSO DE ATIVAÇÃO ===');
       console.error('❌ Erro completo:', error);
       
       let userMessage = "Não foi possível ativar as notificações.";
@@ -153,6 +163,7 @@ export const useFCM = () => {
       if (error.message.includes('negada') || error.message.includes('denied') || error.message.includes('bloqueada')) {
         userMessage = "Permissão para notificações foi negada.";
         userAction = "Para resolver: clique no ícone de cadeado/notificação na barra de endereços e permita notificações, ou vá em Configurações do navegador > Privacidade > Notificações.";
+        setPermissionStatus('denied');
       } else if (error.message.includes('HTTPS')) {
         userMessage = "Notificações requerem conexão segura (HTTPS).";
         userAction = "Certifique-se de acessar o site via HTTPS.";
@@ -160,10 +171,6 @@ export const useFCM = () => {
         userMessage = "Navegador não suporta notificações.";
         userAction = "Use Chrome, Firefox ou Safari atualizado.";
       }
-      
-      // Atualizar status da permissão
-      const currentPermission = Notification.permission;
-      setPermissionStatus(currentPermission);
       
       toast({
         title: "❌ Erro ao ativar notificações",
