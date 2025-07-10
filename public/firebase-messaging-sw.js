@@ -23,14 +23,18 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage(function(payload) {
   console.log('📱 Mensagem recebida em segundo plano:', payload);
 
-  const notificationTitle = payload.notification?.title || 'Novo Pedido - Rascunho Luminoso';
+  const notificationTitle = 'Novo pedido recebido';
   const notificationOptions = {
-    body: payload.notification?.body || 'Você recebeu um novo pedido!',
+    body: 'Você recebeu um novo pedido no site da Rascunho Luminoso.',
     icon: '/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png',
     badge: '/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png',
     tag: 'new-order',
     requireInteraction: true,
     vibrate: [200, 100, 200],
+    data: {
+      url: '/admin',
+      orderId: payload.data?.orderId || 'unknown'
+    },
     actions: [
       {
         action: 'view',

@@ -107,8 +107,8 @@ const OrderForm = () => {
       }
       console.log('✅ Pedido salvo no banco com ID:', orderData.id);
 
-      // Preparar dados para envio do email e notificação
-      const orderNotificationData = {
+      // Preparar dados para notificação push
+      const notificationData = {
         service: formData.service,
         name: formData.name,
         email: formData.email,
@@ -118,47 +118,40 @@ const OrderForm = () => {
         orderId: orderData.id
       };
 
-      // Enviar email e notificação através da edge function
-      console.log('📧 Enviando email e notificação...');
-      let emailSuccess = false;
-      let emailError = null;
+      // Enviar notificação push através da edge function
+      console.log('📱 Enviando notificação push...');
+      let notificationSuccess = false;
 
       try {
-        console.log('🔄 Chamando edge function send-order-email...');
-        const { data, error } = await supabase.functions.invoke('send-order-email', {
-          body: orderNotificationData
+        console.log('🔄 Chamando edge function send-push-notification...');
+        const { data, error } = await supabase.functions.invoke('send-push-notification', {
+          body: notificationData
         });
 
         console.log('📬 Resposta da edge function:', { data, error });
 
         if (error) {
           console.error('❌ Erro na edge function:', error);
-          emailError = `Erro na chamada: ${error.message}`;
-        } else if (data?.error) {
-          console.error('❌ Erro retornado pela function:', data.error);
-          emailError = `Erro do servidor: ${data.error}`;
         } else if (data?.success) {
-          console.log('✅ Email e notificação enviados com sucesso!', data);
-          emailSuccess = true;
+          console.log('✅ Notificação push enviada com sucesso!', data);
+          notificationSuccess = true;
         } else {
           console.warn('⚠️ Resposta inesperada da function:', data);
-          emailError = 'Resposta inesperada do servidor';
         }
-      } catch (emailErr: any) {
-        console.error('❌ Erro ao chamar edge function:', emailErr);
-        emailError = `Erro de conexão: ${emailErr.message}`;
+      } catch (notificationErr: any) {
+        console.error('❌ Erro ao enviar notificação:', notificationErr);
       }
 
-      // Mostrar mensagem de sucesso personalizada
+      // Mostrar mensagem de sucesso
       toast({
-        title: "✅ Recebemos o seu pedido!",
-        description: "Entraremos em contacto consigo em breve. Obrigado pela sua confiança!",
+        title: "✅ Pedido enviado com sucesso!",
+        description: "Recebemos o seu pedido e entraremos em contacto consigo em breve. Obrigado pela sua confiança!",
         className: "bg-green-50 border-green-200",
       });
 
-      // Log adicional se houver problema com email/notificação
-      if (!emailSuccess && emailError) {
-        console.warn('📧 Problema com email/notificação:', emailError);
+      // Log sobre notificação
+      if (!notificationSuccess) {
+        console.warn('📱 Notificação push pode não ter sido enviada, mas pedido foi salvo');
       }
 
       // Reset form

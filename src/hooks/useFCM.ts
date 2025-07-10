@@ -17,32 +17,20 @@ export const useFCM = () => {
       setPermissionStatus(Notification.permission);
       
       // Verificar se já temos token salvo
-      const savedToken = localStorage.getItem('fcm-token');
-      if (savedToken) {
+      const savedToken = localStorage.getItem('fcm-admin-token');
+      if (savedToken && Notification.permission === 'granted') {
         setFcmToken(savedToken);
         console.log('✅ Token FCM recuperado:', savedToken);
-        
-        // Salvar token no backend para notificações
-        saveTokenToBackend(savedToken);
       }
-
-      // Registrar service worker
-      navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then((registration) => {
-          console.log('✅ Service Worker registrado:', registration);
-        })
-        .catch((error) => {
-          console.error('❌ Erro ao registrar Service Worker:', error);
-        });
 
       // Configurar listener para mensagens em primeiro plano
       const unsubscribe = onForegroundMessage((payload) => {
         console.log('📱 Notificação recebida em primeiro plano:', payload);
         
         toast({
-          title: payload.notification?.title || 'Nova Notificação',
-          description: payload.notification?.body || 'Você tem uma nova mensagem',
-          duration: 5000,
+          title: "Novo pedido recebido!",
+          description: "Você recebeu um novo pedido no site da Rascunho Luminoso.",
+          duration: 8000,
         });
       });
 
@@ -52,11 +40,21 @@ export const useFCM = () => {
     }
   }, []);
 
-  const saveTokenToBackend = async (token: string) => {
+  const saveAdminToken = async (token: string) => {
     try {
-      console.log('💾 Salvando token no backend:', token);
+      console.log('💾 Salvando token do administrador:', token.substring(0, 20) + '...');
       
-      // Usar a função RPC para inserir/atualizar o token
+      // Primeiro, desativar todos os tokens existentes
+      const { error: deactivateError } = await supabase
+        .from('fcm_tokens')
+        .update({ is_active: false })
+        .eq('user_type', 'admin');
+
+      if (deactivateError) {
+        console.warn('⚠️ Erro ao desativar tokens antigos:', deactivateError);
+      }
+
+      // Salvar o novo token como ativo
       const { error } = await supabase.rpc('upsert_fcm_token', {
         p_token: token,
         p_user_type: 'admin',
@@ -64,12 +62,14 @@ export const useFCM = () => {
       });
 
       if (error) {
-        console.error('❌ Erro ao salvar token no backend:', error);
+        console.error('❌ Erro ao salvar token do admin:', error);
+        throw error;
       } else {
-        console.log('✅ Token salvo no backend com sucesso');
+        console.log('✅ Token do administrador salvo com sucesso');
       }
     } catch (error) {
       console.error('❌ Erro ao comunicar com backend:', error);
+      throw error;
     }
   };
 
@@ -86,7 +86,7 @@ export const useFCM = () => {
     setIsLoading(true);
 
     try {
-      console.log('🔔 Ativando notificações...');
+      console.log('🔔 Solicitando permissões e configurando notificações...');
       
       const token = await requestFCMToken();
       
@@ -95,133 +95,75 @@ export const useFCM = () => {
         setPermissionStatus('granted');
         
         // Salvar o token no localStorage e backend
-        localStorage.setItem('fcm-token', token);
-        await saveTokenToBackend(token);
+        localStorage.setItem('fcm-admin-token', token);
+        await saveAdminToken(token);
         
-        console.log('✅ Notificações ativadas com sucesso!', token);
+        console.log('✅ Notificações configuradas com sucesso!');
         
         toast({
           title: "✅ Notificações ativadas!",
-          description: "Você receberá notificações sobre novos pedidos.",
+          description: "Você receberá notificações push sobre novos pedidos, mesmo com o navegador fechado.",
+          duration: 6000,
         });
         
         return token;
       } else {
-        // Forçar ativação mesmo sem token válido
-        const fakeToken = 'ADMIN_FORCED_' + Date.now();
-        setFcmToken(fakeToken);
-        setPermissionStatus('granted');
-        localStorage.setItem('fcm-token', fakeToken);
-        await saveTokenToBackend(fakeToken);
-        
-        toast({
-          title: "🔔 Notificações forçadas!",
-          description: "Sistema ativado para receber notificações.",
-        });
-        
-        return fakeToken;
+        throw new Error('Não foi possível obter o token FCM');
       }
-    } catch (error) {
-      console.error('❌ Erro:', error);
-      
-      // Mesmo com erro, forçar ativação
-      const fakeToken = 'ADMIN_ERROR_' + Date.now();
-      setFcmToken(fakeToken);
-      setPermissionStatus('granted');
-      localStorage.setItem('fcm-token', fakeToken);
-      await saveTokenToBackend(fakeToken);
+    } catch (error: any) {
+      console.error('❌ Erro ao configurar notificações:', error);
       
       toast({
-        title: "🔔 Ativação forçada",
-        description: "Notificações ativadas mesmo com erro.",
+        title: "❌ Erro ao ativar notificações",
+        description: error.message || "Não foi possível ativar as notificações. Verifique se o navegador permite notificações.",
+        variant: "destructive",
       });
       
-      return fakeToken;
+      return null;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const forceActivation = async () => {
-    console.log('🚀 FORÇANDO ATIVAÇÃO TOTAL...');
-    
-    setIsLoading(true);
-    
+  const disableNotifications = async () => {
     try {
-      const token = await requestFCMToken();
-      
-      if (token) {
-        setFcmToken(token);
-        setPermissionStatus('granted');
-        localStorage.setItem('fcm-token', token);
-        await saveTokenToBackend(token);
-        
-        toast({
-          title: "🚀 ATIVAÇÃO FORÇADA COM SUCESSO!",
-          description: "Notificações ativadas com token real!",
-        });
-        
-        return token;
-      } else {
-        // Simular ativação com token fake
-        const fakeToken = 'FORCED_ADMIN_' + Date.now();
-        setFcmToken(fakeToken);
-        setPermissionStatus('granted');
-        localStorage.setItem('fcm-token', fakeToken);
-        await saveTokenToBackend(fakeToken);
-        
-        toast({
-          title: "🚀 ATIVAÇÃO FORÇADA!",
-          description: "Notificações foram ativadas! Sistema configurado.",
-        });
-        
-        return fakeToken;
+      if (fcmToken) {
+        // Desativar o token no backend
+        await supabase
+          .from('fcm_tokens')
+          .update({ is_active: false })
+          .eq('token', fcmToken);
       }
-    } catch (error) {
-      console.error('Erro na ativação forçada:', error);
       
-      // Mesmo com erro, ativar
-      const fakeToken = 'FORCED_ERROR_' + Date.now();
-      setFcmToken(fakeToken);
-      setPermissionStatus('granted');
-      localStorage.setItem('fcm-token', fakeToken);
-      await saveTokenToBackend(fakeToken);
+      setFcmToken(null);
+      localStorage.removeItem('fcm-admin-token');
       
       toast({
-        title: "🚀 ATIVAÇÃO FORÇADA (COM ERRO)!",
-        description: "Notificações ativadas mesmo com erro!",
+        title: "🔕 Notificações desativadas",
+        description: "Você não receberá mais notificações push.",
       });
       
-      return fakeToken;
-    } finally {
-      setIsLoading(false);
+      console.log('🔕 Notificações desativadas pelo usuário');
+    } catch (error) {
+      console.error('Erro ao desativar notificações:', error);
     }
   };
 
-  const disableNotifications = () => {
-    setFcmToken(null);
-    localStorage.removeItem('fcm-token');
-    
-    toast({
-      title: "🔕 Notificações desativadas",
-      description: "Você não receberá mais notificações push.",
-    });
-    
-    console.log('🔕 Notificações desativadas pelo usuário');
-  };
-
-  const resetPermissions = async () => {
-    setFcmToken(null);
-    localStorage.removeItem('fcm-token');
-    
-    toast({
-      title: "🔄 Resetando...",
-      description: "Recarregando para resetar permissões...",
-    });
-    
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000);
+  const testNotification = () => {
+    if (Notification.permission === 'granted') {
+      new Notification('🧪 Teste - Rascunho Luminoso', {
+        body: 'Esta é uma notificação de teste! Se você vê isso, as notificações estão funcionando perfeitamente.',
+        icon: '/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png',
+        tag: 'test-notification',
+        requireInteraction: true
+      });
+    } else {
+      toast({
+        title: "🧪 Teste",
+        description: "Permissão para notificações não concedida.",
+        variant: "destructive",
+      });
+    }
   };
 
   return {
@@ -231,7 +173,6 @@ export const useFCM = () => {
     permissionStatus,
     requestPermission,
     disableNotifications,
-    resetPermissions,
-    forceActivation,
+    testNotification,
   };
 };

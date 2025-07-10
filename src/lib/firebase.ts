@@ -26,7 +26,10 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// Função para solicitar permissão e obter token - SEM BLOQUEIOS
+// Chave VAPID pública para notificações push
+const VAPID_KEY = 'BLc4xRzdM8k9VXEfwLu8v7pHWkOleLr190syJKEGCJhXwc-2A3fHq5K_example_vapid_key_here';
+
+// Função para solicitar permissão e obter token FCM
 export const requestFCMToken = async () => {
   if (!messaging) {
     console.error('Firebase Messaging não inicializado');
@@ -34,7 +37,7 @@ export const requestFCMToken = async () => {
   }
 
   try {
-    console.log('🚀 SOLICITANDO TOKEN SEM BLOQUEIOS...');
+    console.log('🔔 Solicitando permissão para notificações...');
     
     // Verificar se o navegador suporta notificações
     if (!('Notification' in window)) {
@@ -42,74 +45,41 @@ export const requestFCMToken = async () => {
       return null;
     }
 
-    // Solicitar permissão sem verificar se já foi negada
+    // Solicitar permissão
     let permission = Notification.permission;
     
     if (permission !== 'granted') {
-      console.log('🔔 Solicitando permissão...');
       permission = await Notification.requestPermission();
-      console.log('🔔 Resultado da permissão:', permission);
     }
     
-    // FORÇAR obtenção do token independente da permissão
-    try {
-      const token = await getToken(messaging, {
-        vapidKey: 'Z8JPXbqK-VKEfwLu8v7pHWkOleLr190syJKEGCJhXwc'
-      });
-      
-      if (token) {
-        console.log('✅ Token FCM obtido com sucesso:', token);
-        return token;
-      }
-    } catch (tokenError) {
-      console.log('⚠️ Erro ao obter token, mas continuando...', tokenError);
+    if (permission !== 'granted') {
+      console.log('Permissão para notificações negada');
+      return null;
     }
+
+    // Registrar service worker
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    console.log('✅ Service Worker registrado:', registration);
     
-    // Tentar novamente com diferentes abordagens
-    console.log('🔄 Tentando abordagem alternativa...');
+    // Aguardar um momento para garantir que o SW está ativo
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Obter token FCM
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: registration
+    });
     
-    try {
-      // Forçar registro do service worker primeiro
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-      console.log('✅ Service Worker forçado:', registration);
-      
-      // Aguardar um pouco e tentar obter token novamente
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const retryToken = await getToken(messaging, {
-        vapidKey: 'Z8JPXbqK-VKEfwLu8v7pHWkOleLr190syJKEGCJhXwc',
-        serviceWorkerRegistration: registration
-      });
-      
-      if (retryToken) {
-        console.log('✅ Token FCM obtido na segunda tentativa:', retryToken);
-        return retryToken;
-      }
-    } catch (retryError) {
-      console.log('⚠️ Erro na segunda tentativa:', retryError);
+    if (token) {
+      console.log('✅ Token FCM obtido:', token);
+      return token;
+    } else {
+      console.log('❌ Não foi possível obter o token FCM');
+      return null;
     }
-    
-    // Se chegou até aqui, tentar uma última vez sem service worker específico
-    console.log('🔄 Última tentativa...');
-    
-    try {
-      const finalToken = await getToken(messaging, {
-        vapidKey: 'Z8JPXbqK-VKEfwLu8v7pHWkOleLr190syJKEGCJhXwc'
-      });
-      
-      if (finalToken) {
-        console.log('✅ Token FCM obtido na tentativa final:', finalToken);
-        return finalToken;
-      }
-    } catch (finalError) {
-      console.log('⚠️ Erro na tentativa final:', finalError);
-    }
-    
-    console.log('⚠️ Não foi possível obter token, mas não há bloqueios');
-    return null;
     
   } catch (error) {
-    console.error('❌ Erro geral capturado (mas sem bloquear):', error);
+    console.error('❌ Erro ao obter token FCM:', error);
     return null;
   }
 };
