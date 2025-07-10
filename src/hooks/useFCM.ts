@@ -12,7 +12,7 @@ export const useFCM = () => {
 
   useEffect(() => {
     const initializeFCM = async () => {
-      console.log('🔧 Inicializando gerenciador FCM...');
+      console.log('🔧 === INICIALIZANDO GERENCIADOR FCM ===');
       
       // Verificar suporte básico do ambiente
       const hasNotificationSupport = 'Notification' in window;
@@ -25,16 +25,18 @@ export const useFCM = () => {
       console.log('  - Notificações:', hasNotificationSupport);
       console.log('  - Service Workers:', hasServiceWorkerSupport);
       console.log('  - Contexto seguro:', isSecureContext);
+      console.log('  - URL atual:', window.location.href);
 
       const supported = hasNotificationSupport && hasServiceWorkerSupport && isSecureContext;
       setIsSupported(supported);
 
       if (supported) {
+        // Verificar permissão atual SEM solicitar ainda
         const currentPermission = Notification.permission;
         setPermissionStatus(currentPermission);
         console.log('📋 Permissão atual:', currentPermission);
         
-        // Verificar se já temos token salvo
+        // Verificar se já temos token salvo E permissão concedida
         const savedToken = localStorage.getItem('fcm-admin-token');
         if (savedToken && currentPermission === 'granted') {
           console.log('💾 Token recuperado do localStorage');
@@ -55,6 +57,7 @@ export const useFCM = () => {
         return unsubscribe;
       } else {
         console.log('❌ Ambiente não suporta notificações push');
+        console.log('❌ Para funcionar: use HTTPS + navegador moderno (Chrome/Firefox/Safari)');
       }
     };
 
@@ -63,7 +66,7 @@ export const useFCM = () => {
 
   const saveAdminToken = async (token: string) => {
     try {
-      console.log('💾 Salvando token do administrador...');
+      console.log('💾 === SALVANDO TOKEN DO ADMINISTRADOR ===');
       
       // Primeiro desativar todos os tokens admin existentes
       await supabase
@@ -95,7 +98,7 @@ export const useFCM = () => {
     if (!isSupported) {
       toast({
         title: "❌ Não suportado",
-        description: "Seu navegador ou conexão não suporta notificações push. Use HTTPS, Chrome, Firefox ou Safari.",
+        description: "Seu navegador ou conexão não suporta notificações push. Use HTTPS + Chrome, Firefox ou Safari.",
         variant: "destructive",
       });
       return null;
@@ -107,11 +110,14 @@ export const useFCM = () => {
       console.log('🚀 === INICIANDO ATIVAÇÃO DE NOTIFICAÇÕES ===');
       
       toast({
-        title: "🔔 Configurando notificações...",
-        description: "Aguarde enquanto configuramos as notificações push.",
-        duration: 3000,
+        title: "🔔 Solicitando permissão...",
+        description: "Uma janela de permissão deve aparecer. Clique em 'Permitir' para ativar as notificações.",
+        duration: 5000,
       });
 
+      // A função requestFCMToken agora faz TUDO na ordem correta:
+      // 1. Solicita permissão PRIMEIRO
+      // 2. Só depois tenta obter o token
       const token = await requestFCMToken();
       
       if (token) {
@@ -144,15 +150,15 @@ export const useFCM = () => {
       let userMessage = "Não foi possível ativar as notificações.";
       let userAction = "";
       
-      if (error.message.includes('negada') || error.message.includes('denied')) {
-        userMessage = "Permissão negada para notificações.";
-        userAction = "Clique no ícone de cadeado na barra de endereços e permita notificações, ou vá em Configurações do navegador.";
+      if (error.message.includes('negada') || error.message.includes('denied') || error.message.includes('bloqueada')) {
+        userMessage = "Permissão para notificações foi negada.";
+        userAction = "Para resolver: clique no ícone de cadeado/notificação na barra de endereços e permita notificações, ou vá em Configurações do navegador > Privacidade > Notificações.";
       } else if (error.message.includes('HTTPS')) {
-        userMessage = "Notificações requerem conexão segura.";
-        userAction = "Acesse o site via HTTPS.";
-      } else if (error.message.includes('bloqueada')) {
-        userMessage = "Notificações bloqueadas.";
-        userAction = "Vá em Configurações > Privacidade > Notificações e permita para este site.";
+        userMessage = "Notificações requerem conexão segura (HTTPS).";
+        userAction = "Certifique-se de acessar o site via HTTPS.";
+      } else if (error.message.includes('navegador')) {
+        userMessage = "Navegador não suporta notificações.";
+        userAction = "Use Chrome, Firefox ou Safari atualizado.";
       }
       
       // Atualizar status da permissão
