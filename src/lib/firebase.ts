@@ -15,180 +15,178 @@ const firebaseConfig = {
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 
-// Inicializar Firebase Cloud Messaging
-let messaging: any = null;
-
-// Chave VAPID pública para notificações push
+// Chave VAPID pública
 const VAPID_KEY = 'Z8JPXbqK-VKEfwLu8v7pHWkOleLr190syJKEGCJhXwc';
 
-// Verificar se o ambiente suporta messaging
-const initializeMessaging = async () => {
+let messaging: any = null;
+
+// Função para verificar se o ambiente suporta FCM
+const checkEnvironmentSupport = () => {
+  console.log('🔍 Verificando suporte do ambiente...');
+  
+  // Verificar se está no navegador
   if (typeof window === 'undefined') {
-    console.log('❌ Ambiente não é navegador - Firebase Messaging não disponível');
-    return null;
-  }
-
-  try {
-    // Verificar se o FCM é suportado
-    const supported = await isSupported();
-    if (!supported) {
-      console.error('❌ Firebase Messaging não é suportado neste navegador');
-      return null;
-    }
-
-    // Verificar se notificações são suportadas
-    if (!('Notification' in window)) {
-      console.error('❌ Este navegador não suporta notificações');
-      return null;
-    }
-
-    // Verificar se service workers são suportados
-    if (!('serviceWorker' in navigator)) {
-      console.error('❌ Este navegador não suporta Service Workers');
-      return null;
-    }
-
-    messaging = getMessaging(app);
-    console.log('✅ Firebase Messaging inicializado com sucesso');
-    return messaging;
-
-  } catch (error) {
-    console.error('❌ Erro ao inicializar Firebase Messaging:', error);
-    return null;
-  }
-};
-
-// Função para verificar protocolo HTTPS
-const checkHTTPS = () => {
-  const isLocalhost = window.location.hostname === 'localhost' || 
-                     window.location.hostname === '127.0.0.1' ||
-                     window.location.hostname === '[::1]';
-  
-  const isHTTPS = window.location.protocol === 'https:';
-  
-  if (!isHTTPS && !isLocalhost) {
-    console.error('❌ Notificações push requerem HTTPS ou localhost');
+    console.error('❌ Não está rodando no navegador');
     return false;
   }
-  
-  console.log('✅ Protocolo válido para notificações push:', window.location.protocol);
+
+  // Verificar notificações
+  if (!('Notification' in window)) {
+    console.error('❌ Navegador não suporta notificações');
+    return false;
+  }
+
+  // Verificar Service Workers
+  if (!('serviceWorker' in navigator)) {
+    console.error('❌ Navegador não suporta Service Workers');
+    return false;
+  }
+
+  // Verificar HTTPS ou localhost
+  const isSecure = window.location.protocol === 'https:' || 
+                   window.location.hostname === 'localhost' ||
+                   window.location.hostname === '127.0.0.1' ||
+                   window.location.hostname === '[::1]';
+
+  if (!isSecure) {
+    console.error('❌ Notificações requerem HTTPS ou localhost');
+    return false;
+  }
+
+  console.log('✅ Ambiente suporta FCM completamente');
   return true;
 };
 
-// Função para registrar service worker
+// Função para registrar Service Worker
 const registerServiceWorker = async () => {
   try {
     console.log('🔧 Registrando Service Worker...');
     
-    // Verificar se já existe um SW registrado
-    const existingRegistration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
-    
+    // Primeiro verificar se já existe
+    const existingRegistration = await navigator.serviceWorker.getRegistration();
     if (existingRegistration) {
-      console.log('✅ Service Worker já registrado:', existingRegistration);
+      console.log('✅ Service Worker já registrado:', existingRegistration.scope);
       return existingRegistration;
     }
 
     // Registrar novo SW
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-      scope: '/'
-    });
-    
-    console.log('✅ Service Worker registrado com sucesso:', registration);
-    
-    // Aguardar o SW ficar ativo
-    await new Promise((resolve) => {
-      if (registration.active) {
-        resolve(registration);
-      } else {
-        registration.addEventListener('statechange', () => {
-          if (registration.active) {
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    console.log('✅ Service Worker registrado com sucesso:', registration.scope);
+
+    // Aguardar que fique ativo
+    if (registration.installing) {
+      console.log('⏳ Service Worker instalando...');
+      await new Promise((resolve) => {
+        registration.installing!.addEventListener('statechange', () => {
+          if (registration.installing!.state === 'activated') {
             resolve(registration);
           }
         });
-      }
-    });
-    
+      });
+    }
+
+    console.log('✅ Service Worker ativo e funcionando');
     return registration;
-    
+
   } catch (error) {
     console.error('❌ Erro ao registrar Service Worker:', error);
-    throw new Error(`Falha ao registrar Service Worker: ${error.message}`);
+    throw new Error(`Falha no Service Worker: ${error.message}`);
   }
 };
 
-// Função para solicitar permissão e obter token FCM
+// Função para solicitar permissão de notificações
+const requestNotificationPermission = async () => {
+  console.log('🔔 Verificando permissão de notificações...');
+  
+  let permission = Notification.permission;
+  console.log('📋 Permissão atual:', permission);
+
+  if (permission === 'default') {
+    console.log('❓ Solicitando permissão ao usuário...');
+    permission = await Notification.requestPermission();
+    console.log('📋 Nova permissão:', permission);
+  }
+
+  if (permission === 'denied') {
+    throw new Error('Permissão para notificações foi negada. Vá nas configurações do navegador e permita notificações para este site.');
+  }
+
+  if (permission !== 'granted') {
+    throw new Error('Permissão para notificações não foi concedida');
+  }
+
+  console.log('✅ Permissão para notificações concedida');
+  return permission;
+};
+
+// Função principal para obter token FCM
 export const requestFCMToken = async () => {
   try {
-    console.log('🔔 Iniciando processo de obtenção do token FCM...');
+    console.log('🚀 === INICIANDO PROCESSO FCM ===');
     
-    // Verificar protocolo HTTPS
-    if (!checkHTTPS()) {
-      throw new Error('Notificações push requerem HTTPS ou localhost');
+    // 1. Verificar suporte do ambiente
+    if (!checkEnvironmentSupport()) {
+      throw new Error('Ambiente não suporta notificações push');
     }
 
-    // Inicializar messaging
-    const messagingInstance = await initializeMessaging();
-    if (!messagingInstance) {
-      throw new Error('Firebase Messaging não pôde ser inicializado');
+    // 2. Verificar se FCM é suportado
+    const supported = await isSupported();
+    if (!supported) {
+      throw new Error('Firebase Messaging não é suportado neste navegador');
     }
+    console.log('✅ Firebase Messaging suportado');
 
-    // Verificar permissão atual
-    let permission = Notification.permission;
-    console.log('📋 Permissão atual:', permission);
+    // 3. Inicializar messaging
+    messaging = getMessaging(app);
+    console.log('✅ Firebase Messaging inicializado');
 
-    // Solicitar permissão se necessário
-    if (permission === 'default') {
-      console.log('🔔 Solicitando permissão para notificações...');
-      permission = await Notification.requestPermission();
-      console.log('📋 Nova permissão:', permission);
-    }
-
-    if (permission === 'denied') {
-      throw new Error('Permissão para notificações foi negada pelo usuário. Por favor, habilite nas configurações do navegador.');
-    }
-
-    if (permission !== 'granted') {
-      throw new Error('Permissão para notificações não foi concedida');
-    }
-
-    // Registrar service worker
+    // 4. Registrar Service Worker
     const registration = await registerServiceWorker();
-    console.log('🔧 Service Worker ativo:', !!registration.active);
 
-    // Aguardar um momento para garantir que tudo está inicializado
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // 5. Solicitar permissão
+    await requestNotificationPermission();
 
-    // Obter token FCM
-    console.log('🎫 Obtendo token FCM com VAPID key...');
-    const token = await getToken(messagingInstance, {
+    // 6. Obter token FCM
+    console.log('🎫 Obtendo token FCM...');
+    console.log('🔑 Usando VAPID Key:', VAPID_KEY.substring(0, 20) + '...');
+    
+    const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: registration
     });
 
     if (!token) {
-      throw new Error('Token FCM não foi gerado. Verifique as configurações do Firebase.');
+      throw new Error('Token FCM não foi gerado. Verifique a configuração do Firebase.');
     }
 
-    console.log('✅ Token FCM obtido com sucesso!');
-    console.log('🎫 Token FCM:', token);
+    console.log('✅ === TOKEN FCM OBTIDO COM SUCESSO ===');
+    console.log('🎫 Token:', token);
+    console.log('📏 Tamanho do token:', token.length, 'caracteres');
     
     return token;
 
   } catch (error: any) {
-    console.error('❌ Erro detalhado ao obter token FCM:', error);
+    console.error('❌ === ERRO NO PROCESSO FCM ===');
+    console.error('❌ Erro:', error);
+    console.error('❌ Mensagem:', error.message);
+    console.error('❌ Stack:', error.stack);
     
-    // Melhorar mensagens de erro
-    let errorMessage = error.message;
+    // Melhorar mensagens de erro para o usuário
+    let userMessage = error.message;
     
     if (error.code === 'messaging/permission-blocked') {
-      errorMessage = 'Permissão bloqueada. Clique no ícone de cadeado na barra de endereços e permita notificações.';
+      userMessage = 'Notificações foram bloqueadas. Clique no ícone de cadeado/notificação na barra de endereços e permita notificações.';
     } else if (error.code === 'messaging/vapid-key-required') {
-      errorMessage = 'Chave VAPID inválida ou não fornecida.';
+      userMessage = 'Chave VAPID é obrigatória para notificações.';
     } else if (error.code === 'messaging/registration-token-not-registered') {
-      errorMessage = 'Token de registro inválido. Tente novamente.';
+      userMessage = 'Token de registro inválido. Tente recarregar a página.';
+    } else if (error.message.includes('denied')) {
+      userMessage = 'Permissão negada. Vá em Configurações do navegador > Privacidade e segurança > Permissões do site > Notificações e permita para este site.';
+    } else if (error.message.includes('HTTPS')) {
+      userMessage = 'Notificações só funcionam em HTTPS. Acesse o site via HTTPS.';
     }
     
-    throw new Error(errorMessage);
+    throw new Error(userMessage);
   }
 };
 
@@ -203,27 +201,32 @@ export const onForegroundMessage = (callback: (payload: any) => void) => {
     console.log('👂 Configurando listener para mensagens em primeiro plano...');
     
     return onMessage(messaging, (payload) => {
-      console.log('📱 Mensagem recebida em primeiro plano:', payload);
+      console.log('📱 Mensagem FCM recebida em primeiro plano:', payload);
       callback(payload);
     });
     
   } catch (error) {
-    console.error('❌ Erro ao configurar listener de mensagens:', error);
+    console.error('❌ Erro ao configurar listener:', error);
     return () => {};
   }
 };
 
 // Função para testar notificação local
 export const testLocalNotification = () => {
-  if (Notification.permission === 'granted') {
-    console.log('🧪 Enviando notificação de teste...');
+  try {
+    if (Notification.permission !== 'granted') {
+      throw new Error('Permissão para notificações não foi concedida');
+    }
+
+    console.log('🧪 Criando notificação de teste...');
     
     const notification = new Notification('🧪 Teste - Rascunho Luminoso', {
-      body: 'Esta é uma notificação de teste! Se você vê isso, as notificações estão funcionando.',
+      body: 'Esta é uma notificação de teste! Se você vê isso, as notificações estão funcionando perfeitamente.',
       icon: '/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png',
+      badge: '/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png',
       tag: 'test-notification',
       requireInteraction: true,
-      badge: '/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png'
+      vibrate: [200, 100, 200]
     });
     
     notification.onclick = () => {
@@ -231,9 +234,12 @@ export const testLocalNotification = () => {
       notification.close();
     };
     
+    console.log('✅ Notificação de teste criada');
     return notification;
-  } else {
-    throw new Error('Permissão para notificações não concedida');
+    
+  } catch (error: any) {
+    console.error('❌ Erro ao criar notificação de teste:', error);
+    throw new Error(`Erro no teste: ${error.message}`);
   }
 };
 

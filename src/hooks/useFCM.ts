@@ -12,34 +12,38 @@ export const useFCM = () => {
 
   useEffect(() => {
     const initializeFCM = async () => {
-      // Verificar suporte básico
+      console.log('🔧 Inicializando gerenciador FCM...');
+      
+      // Verificar suporte básico do ambiente
       const hasNotificationSupport = 'Notification' in window;
       const hasServiceWorkerSupport = 'serviceWorker' in navigator;
-      const isValidProtocol = window.location.protocol === 'https:' || 
+      const isSecureContext = window.isSecureContext || 
                               window.location.hostname === 'localhost' ||
                               window.location.hostname === '127.0.0.1';
 
-      console.log('🔍 Verificando suporte:');
+      console.log('🔍 Checagem de suporte:');
       console.log('  - Notificações:', hasNotificationSupport);
       console.log('  - Service Workers:', hasServiceWorkerSupport);
-      console.log('  - Protocolo válido:', isValidProtocol);
+      console.log('  - Contexto seguro:', isSecureContext);
 
-      const supported = hasNotificationSupport && hasServiceWorkerSupport && isValidProtocol;
+      const supported = hasNotificationSupport && hasServiceWorkerSupport && isSecureContext;
       setIsSupported(supported);
 
       if (supported) {
-        setPermissionStatus(Notification.permission);
+        const currentPermission = Notification.permission;
+        setPermissionStatus(currentPermission);
+        console.log('📋 Permissão atual:', currentPermission);
         
-        // Verificar se já temos token salvo e válido
+        // Verificar se já temos token salvo
         const savedToken = localStorage.getItem('fcm-admin-token');
-        if (savedToken && Notification.permission === 'granted') {
+        if (savedToken && currentPermission === 'granted') {
+          console.log('💾 Token recuperado do localStorage');
           setFcmToken(savedToken);
-          console.log('✅ Token FCM recuperado do localStorage:', savedToken.substring(0, 20) + '...');
         }
 
         // Configurar listener para mensagens em primeiro plano
         const unsubscribe = onForegroundMessage((payload) => {
-          console.log('📱 Notificação recebida em primeiro plano:', payload);
+          console.log('📨 Mensagem recebida em primeiro plano:', payload);
           
           toast({
             title: "🔔 Novo pedido recebido!",
@@ -50,7 +54,7 @@ export const useFCM = () => {
 
         return unsubscribe;
       } else {
-        console.log('❌ Plataforma não suporta notificações push completas');
+        console.log('❌ Ambiente não suporta notificações push');
       }
     };
 
@@ -59,9 +63,8 @@ export const useFCM = () => {
 
   const saveAdminToken = async (token: string) => {
     try {
-      console.log('💾 Salvando token do administrador no backend...');
+      console.log('💾 Salvando token do administrador...');
       
-      // Usar a função RPC do Supabase para salvar o token
       const { error } = await supabase.rpc('upsert_fcm_token', {
         p_token: token,
         p_user_type: 'admin',
@@ -69,11 +72,11 @@ export const useFCM = () => {
       });
 
       if (error) {
-        console.error('❌ Erro ao salvar token no Supabase:', error);
+        console.error('❌ Erro ao salvar token:', error);
         throw error;
       }
 
-      console.log('✅ Token do administrador salvo com sucesso no backend');
+      console.log('✅ Token salvo no backend com sucesso');
       
     } catch (error: any) {
       console.error('❌ Erro ao comunicar com backend:', error);
@@ -94,26 +97,27 @@ export const useFCM = () => {
     setIsLoading(true);
 
     try {
-      console.log('🚀 Iniciando processo de ativação de notificações...');
+      console.log('🚀 === INICIANDO ATIVAÇÃO DE NOTIFICAÇÕES ===');
       
-      // Mostrar toast informativo
       toast({
         title: "🔔 Configurando notificações...",
-        description: "Por favor, permita as notificações quando solicitado.",
-        duration: 5000,
+        description: "Aguarde enquanto configuramos as notificações push.",
+        duration: 3000,
       });
 
       const token = await requestFCMToken();
       
       if (token) {
+        console.log('✅ Token obtido:', token.substring(0, 20) + '...');
+        
         setFcmToken(token);
         setPermissionStatus('granted');
         
-        // Salvar token localmente e no backend
+        // Salvar localmente e no backend
         localStorage.setItem('fcm-admin-token', token);
         await saveAdminToken(token);
         
-        console.log('✅ Processo de ativação concluído com sucesso!');
+        console.log('✅ === NOTIFICAÇÕES ATIVADAS COM SUCESSO ===');
         
         toast({
           title: "✅ Notificações ativadas!",
@@ -127,23 +131,28 @@ export const useFCM = () => {
       }
       
     } catch (error: any) {
-      console.error('❌ Erro no processo de ativação:', error);
+      console.error('❌ === ERRO NA ATIVAÇÃO ===');
+      console.error('❌ Erro completo:', error);
       
       let userMessage = "Não foi possível ativar as notificações.";
+      let userAction = "";
       
-      if (error.message.includes('negada')) {
-        userMessage = "Permissão negada. Clique no ícone de cadeado na barra de endereços e permita notificações.";
+      if (error.message.includes('negada') || error.message.includes('denied')) {
+        userMessage = "Permissão negada para notificações.";
+        userAction = "Clique no ícone de cadeado na barra de endereços e permita notificações, ou vá em Configurações do navegador.";
       } else if (error.message.includes('HTTPS')) {
-        userMessage = "Notificações requerem HTTPS. Acesse o site via HTTPS.";
+        userMessage = "Notificações requerem conexão segura.";
+        userAction = "Acesse o site via HTTPS.";
       } else if (error.message.includes('bloqueada')) {
-        userMessage = "Notificações bloqueadas. Vá em configurações do navegador > notificações e permita para este site.";
+        userMessage = "Notificações bloqueadas.";
+        userAction = "Vá em Configurações > Privacidade > Notificações e permita para este site.";
       }
       
       toast({
         title: "❌ Erro ao ativar notificações",
-        description: userMessage,
+        description: userMessage + (userAction ? " " + userAction : ""),
         variant: "destructive",
-        duration: 10000,
+        duration: 15000,
       });
       
       return null;
@@ -155,7 +164,6 @@ export const useFCM = () => {
   const disableNotifications = async () => {
     try {
       if (fcmToken) {
-        // Desativar token no backend
         console.log('🔕 Desativando token no backend...');
         await supabase
           .from('fcm_tokens')
@@ -171,9 +179,9 @@ export const useFCM = () => {
         description: "Você não receberá mais notificações push.",
       });
       
-      console.log('🔕 Notificações desativadas pelo usuário');
+      console.log('🔕 Notificações desativadas');
     } catch (error) {
-      console.error('❌ Erro ao desativar notificações:', error);
+      console.error('❌ Erro ao desativar:', error);
       toast({
         title: "⚠️ Erro",
         description: "Erro ao desativar notificações, mas foram removidas localmente.",
@@ -193,7 +201,7 @@ export const useFCM = () => {
         return;
       }
 
-      console.log('🧪 Testando notificação local...');
+      console.log('🧪 Executando teste de notificação...');
       testLocalNotification();
       
       toast({

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bell, BellOff, Loader2, CheckCircle, XCircle, AlertCircle, TestTube } from 'lucide-react';
+import { Bell, BellOff, Loader2, CheckCircle, XCircle, AlertCircle, TestTube, Settings } from 'lucide-react';
 import { useFCM } from '@/hooks/useFCM';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -23,7 +23,7 @@ const NotificationManager = () => {
         icon: <XCircle className="h-5 w-5 text-red-500" />,
         status: 'Não Suportado',
         color: 'text-red-500',
-        description: 'Seu navegador não suporta notificações push'
+        description: 'Seu navegador não suporta notificações push ou não está em HTTPS'
       };
     }
 
@@ -32,7 +32,16 @@ const NotificationManager = () => {
         icon: <CheckCircle className="h-5 w-5 text-green-500" />,
         status: 'Ativo e Funcionando',
         color: 'text-green-500',
-        description: 'Você está apto a receber notificações neste dispositivo'
+        description: 'Você receberá notificações sobre novos pedidos, mesmo com o navegador fechado'
+      };
+    }
+
+    if (permissionStatus === 'denied') {
+      return {
+        icon: <XCircle className="h-5 w-5 text-red-500" />,
+        status: 'Permissão Negada',
+        color: 'text-red-500',
+        description: 'Vá nas configurações do navegador e permita notificações para este site'
       };
     }
 
@@ -40,7 +49,7 @@ const NotificationManager = () => {
       icon: <AlertCircle className="h-5 w-5 text-yellow-500" />,
       status: 'Inativo',
       color: 'text-yellow-500',
-      description: 'Clique em "Ativar Notificações" para começar a receber alertas'
+      description: 'Clique em "Ativar Notificações Push" para começar a receber alertas'
     };
   };
 
@@ -55,9 +64,24 @@ const NotificationManager = () => {
             <span>Notificações não suportadas</span>
           </CardTitle>
           <CardDescription>
-            Seu navegador não suporta notificações push. Use Chrome, Firefox ou Safari para receber alertas.
+            Seu navegador não suporta notificações push ou o site não está sendo acessado via HTTPS.
+            Use Chrome, Firefox ou Safari em conexão segura (HTTPS).
           </CardDescription>
         </CardHeader>
+        <CardContent>
+          <Alert className="border-red-200 bg-red-50">
+            <Settings className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-700">
+              <strong>Como resolver:</strong>
+              <br />
+              • Acesse o site via HTTPS (não HTTP)
+              <br />
+              • Use um navegador moderno (Chrome, Firefox, Safari)
+              <br />
+              • Certifique-se de que está em localhost ou domínio seguro
+            </AlertDescription>
+          </Alert>
+        </CardContent>
       </Card>
     );
   }
@@ -89,8 +113,28 @@ const NotificationManager = () => {
           </div>
         </div>
 
+        {/* Permissão negada - instruções especiais */}
+        {permissionStatus === 'denied' && (
+          <Alert className="border-red-200 bg-red-50">
+            <XCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-700">
+              <strong>❌ Permissão negada</strong>
+              <br />
+              <strong>Como resolver:</strong>
+              <br />
+              1. Clique no ícone de cadeado/notificação na barra de endereços
+              <br />
+              2. Ou vá em Configurações do navegador → Privacidade → Notificações
+              <br />
+              3. Permita notificações para este site
+              <br />
+              4. Recarregue a página e tente novamente
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Token ativo */}
-        {fcmToken && (
+        {fcmToken && permissionStatus === 'granted' && (
           <Alert className="border-green-200 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-700">
@@ -105,25 +149,27 @@ const NotificationManager = () => {
           </Alert>
         )}
 
-        {/* Instruções */}
-        {!fcmToken && (
+        {/* Instruções para ativar */}
+        {!fcmToken && permissionStatus !== 'denied' && (
           <Alert>
             <Bell className="h-4 w-4" />
             <AlertDescription>
-              <strong>Como ativar:</strong>
+              <strong>Como ativar notificações:</strong>
               <br />
               1. Clique em "Ativar Notificações Push"
               <br />
               2. Permita as notificações quando o navegador solicitar
               <br />
-              3. Pronto! Você receberá alertas sobre novos pedidos
+              3. Teste a funcionalidade para verificar se está funcionando
+              <br />
+              4. Pronto! Você receberá alertas sobre novos pedidos
             </AlertDescription>
           </Alert>
         )}
 
         {/* Botões de Controle */}
         <div className="flex gap-3 flex-wrap">
-          {!fcmToken ? (
+          {!fcmToken && permissionStatus !== 'denied' ? (
             <Button 
               onClick={requestPermission}
               disabled={isLoading}
@@ -141,6 +187,16 @@ const NotificationManager = () => {
                   Ativar Notificações Push
                 </>
               )}
+            </Button>
+          ) : permissionStatus === 'denied' ? (
+            <Button 
+              onClick={() => window.location.reload()}
+              variant="outline"
+              size="lg"
+              className="flex-1"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Recarregar após permitir
             </Button>
           ) : (
             <>
@@ -175,6 +231,7 @@ const NotificationManager = () => {
           <p>• Se outro dispositivo ativar, este será desativado automaticamente</p>
           <p>• Use "Testar Notificação" para verificar se está funcionando</p>
           <p>• As notificações aparecem na central do sistema (como WhatsApp)</p>
+          <p>• Funciona apenas em HTTPS ou localhost</p>
         </div>
       </CardContent>
     </Card>
