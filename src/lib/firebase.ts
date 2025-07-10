@@ -62,7 +62,7 @@ const registerServiceWorker = async () => {
   try {
     console.log('🔧 Registrando Service Worker...');
     
-    // Primeiro verificar se já existe
+    // Verificar se já existe
     const existingRegistration = await navigator.serviceWorker.getRegistration();
     if (existingRegistration) {
       console.log('✅ Service Worker já registrado:', existingRegistration.scope);
@@ -108,7 +108,7 @@ const requestNotificationPermission = async () => {
   }
 
   if (permission === 'denied') {
-    throw new Error('Permissão para notificações foi negada. Vá nas configurações do navegador e permita notificações para este site.');
+    throw new Error('Permissão para notificações foi negada. Você precisa ir nas configurações do navegador e permitir notificações para este site.');
   }
 
   if (permission !== 'granted') {
@@ -225,9 +225,8 @@ export const testLocalNotification = () => {
       icon: '/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png',
       badge: '/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png',
       tag: 'test-notification',
-      requireInteraction: true,
-      vibrate: [200, 100, 200]
-    });
+      requireInteraction: true
+    } as NotificationOptions);
     
     notification.onclick = () => {
       console.log('🔔 Notificação de teste clicada');

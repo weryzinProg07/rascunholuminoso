@@ -1,5 +1,5 @@
 
-// Firebase Cloud Messaging Service Worker - Versão Refeita
+// Firebase Cloud Messaging Service Worker - Versão Corrigida
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
 
@@ -42,7 +42,6 @@ messaging.onBackgroundMessage(function(payload) {
     tag: 'new-order',
     requireInteraction: true,
     silent: false,
-    vibrate: [200, 100, 200],
     data: {
       url: '/admin',
       orderId: payload.data?.orderId || 'unknown',

@@ -65,6 +65,13 @@ export const useFCM = () => {
     try {
       console.log('💾 Salvando token do administrador...');
       
+      // Primeiro desativar todos os tokens admin existentes
+      await supabase
+        .from('fcm_tokens')
+        .update({ is_active: false })
+        .eq('user_type', 'admin');
+      
+      // Usar a função RPC para salvar o novo token
       const { error } = await supabase.rpc('upsert_fcm_token', {
         p_token: token,
         p_user_type: 'admin',
@@ -148,6 +155,10 @@ export const useFCM = () => {
         userAction = "Vá em Configurações > Privacidade > Notificações e permita para este site.";
       }
       
+      // Atualizar status da permissão
+      const currentPermission = Notification.permission;
+      setPermissionStatus(currentPermission);
+      
       toast({
         title: "❌ Erro ao ativar notificações",
         description: userMessage + (userAction ? " " + userAction : ""),
@@ -172,6 +183,7 @@ export const useFCM = () => {
       }
       
       setFcmToken(null);
+      setPermissionStatus('default');
       localStorage.removeItem('fcm-admin-token');
       
       toast({
