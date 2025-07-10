@@ -167,9 +167,10 @@ const NotificationManager = () => {
           </Alert>
         )}
 
-        {/* Botões de Controle */}
+        {/* Botões de Controle - CORRIGIDO */}
         <div className="flex gap-3 flex-wrap">
-          {!fcmToken && permissionStatus !== 'denied' ? (
+          {/* Mostrar botão "Ativar" quando não há token E a permissão não foi negada */}
+          {!fcmToken && permissionStatus !== 'denied' && (
             <Button 
               onClick={requestPermission}
               disabled={isLoading}
@@ -188,7 +189,10 @@ const NotificationManager = () => {
                 </>
               )}
             </Button>
-          ) : permissionStatus === 'denied' ? (
+          )}
+
+          {/* Mostrar botão "Recarregar" APENAS quando permissão foi explicitamente negada */}
+          {permissionStatus === 'denied' && (
             <Button 
               onClick={() => window.location.reload()}
               variant="outline"
@@ -198,7 +202,10 @@ const NotificationManager = () => {
               <Settings className="w-4 h-4 mr-2" />
               Recarregar após permitir
             </Button>
-          ) : (
+          )}
+
+          {/* Mostrar botões de teste/desativar quando já há token ativo */}
+          {fcmToken && permissionStatus === 'granted' && (
             <>
               <Button 
                 onClick={testNotification}
