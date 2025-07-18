@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload, Send, CheckCircle, AlertCircle, Mail, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import emailjs from '@emailjs/browser';
 
 const OrderForm = () => {
   const { toast } = useToast();
@@ -14,6 +15,11 @@ const OrderForm = () => {
     description: '',
     files: null as FileList | null
   });
+
+  // Configuração do EmailJS - substitua pelos seus valores
+  const EMAILJS_SERVICE_ID = 'YOUR_SERVICE_ID';
+  const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
+  const EMAILJS_PUBLIC_KEY = 'YOUR_PUBLIC_KEY';
 
   const services = [
     'Impressão de Documentos',
@@ -107,39 +113,37 @@ const OrderForm = () => {
       }
       console.log('✅ Pedido salvo no banco com ID:', orderData.id);
 
-      // Preparar dados para envio de e-mail
-      const emailData = {
-        service: formData.service,
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        description: formData.description,
-        files: uploadedFiles,
-        orderId: orderData.id
-      };
-
-      // Enviar e-mail de notificação através da edge function
-      console.log('📧 Enviando e-mail de notificação...');
+      // Enviar e-mail de notificação usando EmailJS
+      console.log('📧 Enviando e-mail de notificação via EmailJS...');
       let emailSuccess = false;
 
       try {
-        console.log('🔄 Chamando edge function send-order-email...');
-        const { data, error } = await supabase.functions.invoke('send-order-email', {
-          body: emailData
-        });
+        console.log('🔄 Enviando notificação para rascunholuminoso@gmail.com...');
+        
+        const templateParams = {
+          to_email: 'rascunholuminoso@gmail.com',
+          subject: 'Novo pedido no site',
+          message: `Olá,
 
-        console.log('📬 Resposta da edge function:', { data, error });
+Acaba de chegar um novo pedido no site da Rascunho Luminoso.
+Acesse a área de administração para visualizar os detalhes.
 
-        if (error) {
-          console.error('❌ Erro na edge function:', error);
-        } else if (data?.success) {
-          console.log('✅ E-mail enviado com sucesso!', data);
-          emailSuccess = true;
-        } else {
-          console.warn('⚠️ Resposta inesperada da function:', data);
-        }
+---
+Este é um e-mail automático de notificação.`,
+        };
+
+        await emailjs.send(
+          EMAILJS_SERVICE_ID,
+          EMAILJS_TEMPLATE_ID,
+          templateParams,
+          EMAILJS_PUBLIC_KEY
+        );
+
+        console.log('✅ E-mail de notificação enviado com sucesso!');
+        emailSuccess = true;
       } catch (emailErr: any) {
-        console.error('❌ Erro ao enviar e-mail:', emailErr);
+        console.error('❌ Erro ao enviar e-mail via EmailJS:', emailErr);
+        console.warn('⚠️ Verifique se as configurações do EmailJS estão corretas');
       }
 
       // Mostrar mensagem de sucesso
