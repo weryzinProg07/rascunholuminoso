@@ -263,67 +263,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("✅ EMAIL ENVIADO COM SUCESSO!");
     console.log("✅ ID do email:", emailResponse.data.id);
-
-    // Enviar notificação push para admin
-    try {
-      console.log("📱 Enviando notificação push para admin...");
-      
-      const firebaseServerKey = Deno.env.get("FIREBASE_SERVER_KEY");
-      if (!firebaseServerKey) {
-        console.warn("⚠️ FIREBASE_SERVER_KEY não encontrada, pulando notificação push");
-      } else {
-        // Payload da notificação FCM
-        const fcmPayload = {
-          to: "/topics/admin-notifications",
-          notification: {
-            title: "🎨 Novo Pedido - Rascunho Luminoso",
-            body: `${orderData.service} solicitado por ${orderData.name}`,
-            icon: "/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png",
-            badge: "/lovable-uploads/9d315dc9-03f6-4949-85dc-8c64f34b1b8f.png",
-            tag: "new-order",
-            requireInteraction: true,
-            click_action: "/admin"
-          },
-          data: {
-            orderId: orderData.orderId,
-            service: orderData.service,
-            customerName: orderData.name,
-            timestamp: new Date().toISOString(),
-            url: "/admin"
-          }
-        };
-
-        console.log("📱 Enviando FCM com payload:", JSON.stringify(fcmPayload, null, 2));
-
-        const fcmResponse = await fetch("https://fcm.googleapis.com/fcm/send", {
-          method: "POST",
-          headers: {
-            "Authorization": `key=${firebaseServerKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(fcmPayload),
-        });
-
-        if (fcmResponse.ok) {
-          const fcmResult = await fcmResponse.json();
-          console.log("✅ Notificação push enviada com sucesso:", fcmResult);
-        } else {
-          const fcmError = await fcmResponse.text();
-          console.error("❌ Erro ao enviar notificação push:", fcmError);
-        }
-      }
-      
-    } catch (pushError) {
-      console.warn("⚠️ Erro ao enviar notificação push (não crítico):", pushError);
-    }
-
     console.log("=== EDGE FUNCTION FINALIZADA COM SUCESSO ===");
 
     return new Response(JSON.stringify({ 
       success: true, 
       emailId: emailResponse.data.id,
       message: "Email enviado com sucesso para rascunholuminoso@gmail.com",
-      notification: "Notificação push enviada para admin",
       timestamp: new Date().toISOString()
     }), {
       status: 200,

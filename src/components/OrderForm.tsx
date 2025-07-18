@@ -107,8 +107,8 @@ const OrderForm = () => {
       }
       console.log('✅ Pedido salvo no banco com ID:', orderData.id);
 
-      // Preparar dados para notificação push
-      const notificationData = {
+      // Preparar dados para envio de e-mail
+      const emailData = {
         service: formData.service,
         name: formData.name,
         email: formData.email,
@@ -118,14 +118,14 @@ const OrderForm = () => {
         orderId: orderData.id
       };
 
-      // Enviar notificação push através da edge function
-      console.log('📱 Enviando notificação push...');
-      let notificationSuccess = false;
+      // Enviar e-mail de notificação através da edge function
+      console.log('📧 Enviando e-mail de notificação...');
+      let emailSuccess = false;
 
       try {
-        console.log('🔄 Chamando edge function send-push-notification...');
-        const { data, error } = await supabase.functions.invoke('send-push-notification', {
-          body: notificationData
+        console.log('🔄 Chamando edge function send-order-email...');
+        const { data, error } = await supabase.functions.invoke('send-order-email', {
+          body: emailData
         });
 
         console.log('📬 Resposta da edge function:', { data, error });
@@ -133,25 +133,27 @@ const OrderForm = () => {
         if (error) {
           console.error('❌ Erro na edge function:', error);
         } else if (data?.success) {
-          console.log('✅ Notificação push enviada com sucesso!', data);
-          notificationSuccess = true;
+          console.log('✅ E-mail enviado com sucesso!', data);
+          emailSuccess = true;
         } else {
           console.warn('⚠️ Resposta inesperada da function:', data);
         }
-      } catch (notificationErr: any) {
-        console.error('❌ Erro ao enviar notificação:', notificationErr);
+      } catch (emailErr: any) {
+        console.error('❌ Erro ao enviar e-mail:', emailErr);
       }
 
       // Mostrar mensagem de sucesso
       toast({
         title: "✅ Pedido enviado com sucesso!",
-        description: "Recebemos o seu pedido e entraremos em contacto consigo em breve. Obrigado pela sua confiança!",
+        description: emailSuccess 
+          ? "Recebemos o seu pedido e foi enviada uma notificação por e-mail. Entraremos em contacto consigo em breve!"
+          : "Recebemos o seu pedido e entraremos em contacto consigo em breve. Obrigado pela sua confiança!",
         className: "bg-green-50 border-green-200",
       });
 
-      // Log sobre notificação
-      if (!notificationSuccess) {
-        console.warn('📱 Notificação push pode não ter sido enviada, mas pedido foi salvo');
+      // Log sobre e-mail
+      if (!emailSuccess) {
+        console.warn('📧 E-mail de notificação pode não ter sido enviado, mas pedido foi salvo');
       }
 
       // Reset form
