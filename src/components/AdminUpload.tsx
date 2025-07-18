@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LogOut, Upload, ShoppingBag, Settings, Bell } from 'lucide-react';
+import { LogOut, Upload, ShoppingBag, Settings } from 'lucide-react';
 import AdminGalleryUpload from '@/components/AdminGalleryUpload';
 import AdminGalleryManager from '@/components/AdminGalleryManager';
 import AdminOrders from '@/components/AdminOrders';
-import NotificationManager from '@/components/NotificationManager';
 
 const AdminUpload = () => {
   const { logout } = useAdminAuth();
@@ -45,7 +44,7 @@ const AdminUpload = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="upload" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="upload" className="flex items-center space-x-2">
               <Upload className="w-4 h-4" />
               <span>Upload</span>
@@ -57,10 +56,6 @@ const AdminUpload = () => {
             <TabsTrigger value="orders" className="flex items-center space-x-2">
               <ShoppingBag className="w-4 h-4" />
               <span>Pedidos Recebidos</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center space-x-2">
-              <Bell className="w-4 h-4" />
-              <span>Notificações</span>
             </TabsTrigger>
           </TabsList>
 
@@ -74,10 +69,6 @@ const AdminUpload = () => {
 
           <TabsContent value="orders">
             <AdminOrders />
-          </TabsContent>
-
-          <TabsContent value="notifications">
-            <NotificationManager />
           </TabsContent>
         </Tabs>
       </div>
