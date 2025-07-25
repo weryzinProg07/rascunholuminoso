@@ -1,14 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { LogOut, Upload, ShoppingBag, Settings } from 'lucide-react';
 import AdminGalleryUpload from '@/components/AdminGalleryUpload';
 import AdminGalleryManager from '@/components/AdminGalleryManager';
 import AdminOrders from '@/components/AdminOrders';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminUpload = () => {
   const { logout } = useAdminAuth();
+  const [unseenOrdersCount, setUnseenOrdersCount] = useState(0);
+
+  useEffect(() => {
+    fetchUnseenOrdersCount();
+    
+    // Subscribe to real-time updates for new orders
+    const channel = supabase
+      .channel('orders-updates')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'orders'
+      }, () => {
+        fetchUnseenOrdersCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchUnseenOrdersCount = async () => {
+    try {
+      const lastViewedTimestamp = localStorage.getItem('lastViewedOrders');
+      
+      let query = supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true });
+      
+      if (lastViewedTimestamp) {
+        query = query.gt('created_at', lastViewedTimestamp);
+      }
+      
+      const { count } = await query;
+      setUnseenOrdersCount(count || 0);
+    } catch (error) {
+      console.error('Erro ao carregar contagem de pedidos não vistos:', error);
+    }
+  };
+
+  const markOrdersAsSeen = () => {
+    localStorage.setItem('lastViewedOrders', new Date().toISOString());
+    setUnseenOrdersCount(0);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -53,9 +100,21 @@ const AdminUpload = () => {
               <Settings className="w-4 h-4" />
               <span>Gerenciar Galeria</span>
             </TabsTrigger>
-            <TabsTrigger value="orders" className="flex items-center space-x-2">
+            <TabsTrigger 
+              value="orders" 
+              className="flex items-center space-x-2 relative"
+              onClick={markOrdersAsSeen}
+            >
               <ShoppingBag className="w-4 h-4" />
               <span>Pedidos Recebidos</span>
+              {unseenOrdersCount > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full flex items-center justify-center text-xs p-0 min-w-[20px]"
+                >
+                  {unseenOrdersCount > 99 ? '99+' : unseenOrdersCount}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
